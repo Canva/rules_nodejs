@@ -71,10 +71,10 @@ def is_linux_os(rctx):
 
 def node_exists_for_os(node_version, os_name):
     "Whether a node binary is available for this platform"
-    is_16_or_greater = check_version(node_version, "16.0.0")
+    is_14_or_greater = check_version(node_version, "14.0.0")
 
-    # There is no Apple Silicon native version of node before 16
-    return is_16_or_greater or os_name != "darwin_arm64"
+    # There is no Apple Silicon native version of node before 14
+    return is_14_or_greater or os_name != "darwin_arm64"
 
 def assert_node_exists_for_host(rctx):
     node_version = rctx.attr.node_version

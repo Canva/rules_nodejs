@@ -570,10 +570,9 @@ if %errorlevel% neq 0 exit /b %errorlevel%
     # This template file is used by the packager tool and the pkg_npm rule.
     # `yarn publish` is not ready for use under Bazel, see https://github.com/yarnpkg/yarn/issues/610
     repository_ctx.file("run_npm.sh.template", content = """
-"{node}" "{script}" TMPL_args "$@"
+"{npm}" TMPL_args "$@"
 """.format(
-        node = repository_ctx.path(node_entry),
-        script = repository_ctx.path(npm_script),
+        npm = repository_ctx.path(npm_entry),
     ))
 
     repository_ctx.file("run_npm.bat.template", content = """

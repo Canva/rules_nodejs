@@ -1,70 +1,32 @@
-// clang-format off
 'use strict';
 
+var fs = require('fs');
 var path = require('path');
 var util = require('util');
-var fs$1 = require('fs');
 
-function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
-
-var path__default = /*#__PURE__*/_interopDefaultLegacy(path);
-var util__default = /*#__PURE__*/_interopDefaultLegacy(util);
-var fs__default = /*#__PURE__*/_interopDefaultLegacy(fs$1);
-
-var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-
-function createCommonjsModule(fn) {
-  var module = { exports: {} };
-	return fn(module, module.exports), module.exports;
+function _interopNamespaceDefault(e) {
+    var n = Object.create(null);
+    if (e) {
+        Object.keys(e).forEach(function (k) {
+            if (k !== 'default') {
+                var d = Object.getOwnPropertyDescriptor(e, k);
+                Object.defineProperty(n, k, d.get ? d : {
+                    enumerable: true,
+                    get: function () { return e[k]; }
+                });
+            }
+        });
+    }
+    n.default = e;
+    return Object.freeze(n);
 }
 
-var fs = createCommonjsModule(function (module, exports) {
-/**
- * @license
- * Copyright 2019 The Bazel Authors. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- *
- * You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-var __asyncValues = (commonjsGlobal && commonjsGlobal.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
-var __await = (commonjsGlobal && commonjsGlobal.__await) || function (v) { return this instanceof __await ? (this.v = v, this) : new __await(v); };
-var __asyncGenerator = (commonjsGlobal && commonjsGlobal.__asyncGenerator) || function (thisArg, _arguments, generator) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var g = generator.apply(thisArg, _arguments || []), i, q = [];
-    return i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i;
-    function verb(n) { if (g[n]) i[n] = function (v) { return new Promise(function (a, b) { q.push([n, v, a, b]) > 1 || resume(n, v); }); }; }
-    function resume(n, v) { try { step(g[n](v)); } catch (e) { settle(q[0][3], e); } }
-    function step(r) { r.value instanceof __await ? Promise.resolve(r.value.v).then(fulfill, reject) : settle(q[0][2], r); }
-    function fulfill(value) { resume("next", value); }
-    function reject(value) { resume("throw", value); }
-    function settle(f, v) { if (f(v), q.shift(), q.length) resume(q[0][0], q[0][1]); }
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.escapeFunction = exports.isOutPath = exports.patcher = void 0;
+var fs__namespace = /*#__PURE__*/_interopNamespaceDefault(fs);
+var path__namespace = /*#__PURE__*/_interopNamespaceDefault(path);
+var util__namespace = /*#__PURE__*/_interopNamespaceDefault(util);
 
-
-// using require here on purpose so we can override methods with any
-// also even though imports are mutable in typescript the cognitive dissonance is too high because
-// es modules
-
-// tslint:disable-next-line:no-any
-const patcher = (fs = fs__default['default'], roots) => {
-    fs = fs || fs__default['default'];
+function patcher$1(fs = fs__namespace, roots) {
+    fs = fs || fs__namespace;
     roots = roots || [];
     roots = roots.filter(root => fs.existsSync(root));
     if (!roots.length) {
@@ -85,17 +47,22 @@ const patcher = (fs = fs__default['default'], roots) => {
     const origReadlinkSync = fs.readlinkSync.bind(fs);
     const origReaddir = fs.readdir.bind(fs);
     const origReaddirSync = fs.readdirSync.bind(fs);
-    const { isEscape } = exports.escapeFunction(roots);
-    // tslint:disable-next-line:no-any
+    const { isEscape } = escapeFunction(roots);
+    const logged = {};
     fs.lstat = (...args) => {
+        const ekey = new Error('').stack || '';
+        if (!logged[ekey]) {
+            logged[ekey] = true;
+        }
         let cb = args.length > 1 ? args[args.length - 1] : undefined;
         // preserve error when calling function without required callback.
         if (cb) {
             cb = once(cb);
             args[args.length - 1] = (err, stats) => {
-                if (err)
+                if (err) {
                     return cb(err);
-                path__default['default'].resolve(args[0]);
+                }
+                path__namespace.resolve(args[0]);
                 if (!stats.isSymbolicLink()) {
                     return cb(null, stats);
                 }
@@ -116,7 +83,7 @@ const patcher = (fs = fs__default['default'], roots) => {
                             return cb(err);
                         }
                     }
-                    str = path__default['default'].resolve(path__default['default'].dirname(args[0]), str);
+                    str = path__namespace.resolve(path__namespace.dirname(args[0]), str);
                     if (isEscape(str, args[0])) {
                         // if it's an out link we have to return the original stat.
                         return origStat(args[0], (err, plainStat) => {
@@ -134,16 +101,16 @@ const patcher = (fs = fs__default['default'], roots) => {
         }
         origLstat(...args);
     };
-    // tslint:disable-next-line:no-any
     fs.realpath = (...args) => {
         let cb = args.length > 1 ? args[args.length - 1] : undefined;
         if (cb) {
             cb = once(cb);
             args[args.length - 1] = (err, str) => {
-                if (err)
+                if (err) {
                     return cb(err);
+                }
                 if (isEscape(str, args[0])) {
-                    cb(null, path__default['default'].resolve(args[0]));
+                    cb(null, path__namespace.resolve(args[0]));
                 }
                 else {
                     cb(null, str);
@@ -152,37 +119,38 @@ const patcher = (fs = fs__default['default'], roots) => {
         }
         origRealpath(...args);
     };
-    fs.realpath.native =
-        (...args) => {
-            let cb = args.length > 1 ? args[args.length - 1] : undefined;
-            if (cb) {
-                cb = once(cb);
-                args[args.length - 1] = (err, str) => {
-                    if (err)
-                        return cb(err);
-                    if (isEscape(str, args[0])) {
-                        cb(null, path__default['default'].resolve(args[0]));
-                    }
-                    else {
-                        cb(null, str);
-                    }
-                };
-            }
-            origRealpathNative(...args);
-        };
-    // tslint:disable-next-line:no-any
+    fs.realpath.native = (...args) => {
+        let cb = args.length > 1 ? args[args.length - 1] : undefined;
+        if (cb) {
+            cb = once(cb);
+            args[args.length - 1] = (err, str) => {
+                if (err) {
+                    return cb(err);
+                }
+                if (isEscape(str, args[0])) {
+                    cb(null, path__namespace.resolve(args[0]));
+                }
+                else {
+                    cb(null, str);
+                }
+            };
+        }
+        origRealpathNative(...args);
+    };
     fs.readlink = (...args) => {
         let cb = args.length > 1 ? args[args.length - 1] : undefined;
         if (cb) {
             cb = once(cb);
             args[args.length - 1] = (err, str) => {
-                args[0] = path__default['default'].resolve(args[0]);
-                if (str)
-                    str = path__default['default'].resolve(path__default['default'].dirname(args[0]), str);
-                if (err)
+                args[0] = path__namespace.resolve(args[0]);
+                if (str) {
+                    str = path__namespace.resolve(path__namespace.dirname(args[0]), str);
+                }
+                if (err) {
                     return cb(err);
+                }
                 if (isEscape(str, args[0])) {
-                    const e = new Error('EINVAL: invalid argument, readlink \'' + args[0] + '\'');
+                    const e = new Error("EINVAL: invalid argument, readlink '" + args[0] + "'");
                     // tslint:disable-next-line:no-any
                     e.code = 'EINVAL';
                     // if its not supposed to be a link we have to trigger an EINVAL error.
@@ -193,16 +161,15 @@ const patcher = (fs = fs__default['default'], roots) => {
         }
         origReadlink(...args);
     };
-    // tslint:disable-next-line:no-any
     fs.lstatSync = (...args) => {
         const stats = origLstatSync(...args);
-        const linkPath = path__default['default'].resolve(args[0]);
+        const linkPath = path__namespace.resolve(args[0]);
         if (!stats.isSymbolicLink()) {
             return stats;
         }
         let linkTarget;
         try {
-            linkTarget = path__default['default'].resolve(path__default['default'].dirname(args[0]), origReadlinkSync(linkPath));
+            linkTarget = path__namespace.resolve(path__namespace.dirname(args[0]), origReadlinkSync(linkPath));
         }
         catch (e) {
             if (e.code === 'ENOENT') {
@@ -224,37 +191,32 @@ const patcher = (fs = fs__default['default'], roots) => {
         }
         return stats;
     };
-    // tslint:disable-next-line:no-any
     fs.realpathSync = (...args) => {
         const str = origRealpathSync(...args);
         if (isEscape(str, args[0])) {
-            return path__default['default'].resolve(args[0]);
+            return path__namespace.resolve(args[0]);
         }
         return str;
     };
-    // tslint:disable-next-line:no-any
     fs.realpathSync.native = (...args) => {
         const str = origRealpathSyncNative(...args);
         if (isEscape(str, args[0])) {
-            return path__default['default'].resolve(args[0]);
+            return path__namespace.resolve(args[0]);
         }
         return str;
     };
-    // tslint:disable-next-line:no-any
     fs.readlinkSync = (...args) => {
-        args[0] = path__default['default'].resolve(args[0]);
-        const str = path__default['default'].resolve(path__default['default'].dirname(args[0]), origReadlinkSync(...args));
+        args[0] = path__namespace.resolve(args[0]);
+        const str = path__namespace.resolve(path__namespace.dirname(args[0]), origReadlinkSync(...args));
         if (isEscape(str, args[0]) || str === args[0]) {
-            const e = new Error('EINVAL: invalid argument, readlink \'' + args[0] + '\'');
-            // tslint:disable-next-line:no-any
+            const e = new Error("EINVAL: invalid argument, readlink '" + args[0] + "'");
             e.code = 'EINVAL';
             throw e;
         }
         return str;
     };
-    // tslint:disable-next-line:no-any
     fs.readdir = (...args) => {
-        const p = path__default['default'].resolve(args[0]);
+        const p = path__namespace.resolve(args[0]);
         let cb = args[args.length - 1];
         if (typeof cb !== 'function') {
             // this will likely throw callback required error.
@@ -262,11 +224,13 @@ const patcher = (fs = fs__default['default'], roots) => {
         }
         cb = once(cb);
         args[args.length - 1] = (err, result) => {
-            if (err)
+            if (err) {
                 return cb(err);
+            }
             // user requested withFileTypes
             if (result[0] && result[0].isSymbolicLink) {
-                Promise.all(result.map((v) => handleDirent(p, v)))
+                Promise
+                    .all(result.map((v) => handleDirent(p, v)))
                     .then(() => {
                     cb(null, result);
                 })
@@ -281,28 +245,27 @@ const patcher = (fs = fs__default['default'], roots) => {
         };
         origReaddir(...args);
     };
-    // tslint:disable-next-line:no-any
     fs.readdirSync = (...args) => {
         const res = origReaddirSync(...args);
-        const p = path__default['default'].resolve(args[0]);
-        // tslint:disable-next-line:no-any
+        const p = path__namespace.resolve(args[0]);
         res.forEach((v) => {
             handleDirentSync(p, v);
         });
         return res;
     };
     // i need to use this twice in bodt readdor and readdirSync. maybe in fs.Dir
-    // tslint:disable-next-line:no-any
     function patchDirent(dirent, stat) {
         // add all stat is methods to Dirent instances with their result.
         for (const i in stat) {
             if (i.indexOf('is') === 0 && typeof stat[i] === 'function') {
                 //
                 const result = stat[i]();
-                if (result)
+                if (result) {
                     dirent[i] = () => true;
-                else
+                }
+                else {
                     dirent[i] = () => false;
+                }
             }
         }
     }
@@ -333,28 +296,15 @@ const patcher = (fs = fs__default['default'], roots) => {
         };
     }
     async function handleDir(dir) {
-        const p = path__default['default'].resolve(dir.path);
+        const p = path__namespace.resolve(dir.path);
         const origIterator = dir[Symbol.asyncIterator].bind(dir);
         // tslint:disable-next-line:no-any
         const origRead = dir.read.bind(dir);
-        dir[Symbol.asyncIterator] = function () {
-            return __asyncGenerator(this, arguments, function* () {
-                var e_1, _a;
-                try {
-                    for (var _b = __asyncValues(origIterator()), _c; _c = yield __await(_b.next()), !_c.done;) {
-                        const entry = _c.value;
-                        yield __await(handleDirent(p, entry));
-                        yield yield __await(entry);
-                    }
-                }
-                catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                finally {
-                    try {
-                        if (_c && !_c.done && (_a = _b.return)) yield __await(_a.call(_b));
-                    }
-                    finally { if (e_1) throw e_1.error; }
-                }
-            });
+        dir[Symbol.asyncIterator] = async function* () {
+            for await (const entry of origIterator()) {
+                await handleDirent(p, entry);
+                yield entry;
+            }
         };
         // tslint:disable-next-line:no-any
         dir.read = async (...args) => {
@@ -385,26 +335,29 @@ const patcher = (fs = fs__default['default'], roots) => {
     function handleDirent(p, v) {
         handleCounter++;
         return new Promise((resolve, reject) => {
-            if (fs.DEBUG)
-                console.error(handleCounter + ' opendir: found link? ', path__default['default'].join(p, v.name), v.isSymbolicLink());
+            if (fs.DEBUG) {
+                console.error(handleCounter + ' opendir: found link? ', path__namespace.join(p, v.name), v.isSymbolicLink());
+            }
             if (!v.isSymbolicLink()) {
                 return resolve(v);
             }
-            const linkName = path__default['default'].join(p, v.name);
+            const linkName = path__namespace.join(p, v.name);
             origReadlink(linkName, (err, target) => {
                 if (err) {
                     return reject(err);
                 }
-                if (fs.DEBUG)
-                    console.error(handleCounter + ' opendir: escapes? [target]', path__default['default'].resolve(target), '[link] ' + linkName, isEscape(path__default['default'].resolve(target), linkName), roots);
-                if (!isEscape(path__default['default'].resolve(target), linkName)) {
+                if (fs.DEBUG) {
+                    console.error(handleCounter + ' opendir: escapes? [target]', path__namespace.resolve(target), '[link] ' + linkName, isEscape(path__namespace.resolve(target), linkName), roots);
+                }
+                if (!isEscape(path__namespace.resolve(target), linkName)) {
                     return resolve(v);
                 }
                 fs.stat(target, (err, stat) => {
                     if (err) {
                         if (err.code === 'ENOENT') {
-                            if (fs.DEBUG)
-                                console.error(handleCounter + ' opendir: broken link! resolving to link ', path__default['default'].resolve(target));
+                            if (fs.DEBUG) {
+                                console.error(handleCounter + ' opendir: broken link! resolving to link ', path__namespace.resolve(target));
+                            }
                             // this is a broken symlink
                             // even though this broken symlink points outside of the root
                             // we'll return it.
@@ -418,8 +371,9 @@ const patcher = (fs = fs__default['default'], roots) => {
                         // transient fs related error. busy etc.
                         return reject(err);
                     }
-                    if (fs.DEBUG)
-                        console.error(handleCounter + ' opendir: patching dirent to look like it\'s target', path__default['default'].resolve(target));
+                    if (fs.DEBUG) {
+                        console.error(handleCounter + " opendir: patching dirent to look like it's target", path__namespace.resolve(target));
+                    }
                     // add all stat is methods to Dirent instances with their result.
                     patchDirent(v, stat);
                     v.isSymbolicLink = () => false;
@@ -432,8 +386,8 @@ const patcher = (fs = fs__default['default'], roots) => {
         if (v && v.isSymbolicLink) {
             if (v.isSymbolicLink()) {
                 // any errors thrown here are valid. things like transient fs errors
-                const target = path__default['default'].resolve(p, origReadlinkSync(path__default['default'].join(p, v.name)));
-                if (isEscape(target, path__default['default'].join(p, v.name))) {
+                const target = path__namespace.resolve(p, origReadlinkSync(path__namespace.join(p, v.name)));
+                if (isEscape(target, path__namespace.join(p, v.name))) {
                     // Dirent exposes file type so if we want to hide that this is a link
                     // we need to find out if it's a file or directory.
                     v.isSymbolicLink = () => false;
@@ -459,13 +413,14 @@ const patcher = (fs = fs__default['default'], roots) => {
     if (promisePropertyDescriptor) {
         // tslint:disable-next-line:no-any
         const promises = {};
-        promises.lstat = util__default['default'].promisify(fs.lstat);
+        promises.lstat = util__namespace.promisify(fs.lstat);
         // NOTE: node core uses the newer realpath function fs.promises.native instead of fs.realPath
-        promises.realpath = util__default['default'].promisify(fs.realpath.native);
-        promises.readlink = util__default['default'].promisify(fs.readlink);
-        promises.readdir = util__default['default'].promisify(fs.readdir);
-        if (fs.opendir)
-            promises.opendir = util__default['default'].promisify(fs.opendir);
+        promises.realpath = util__namespace.promisify(fs.realpath.native);
+        promises.readlink = util__namespace.promisify(fs.readlink);
+        promises.readdir = util__namespace.promisify(fs.readdir);
+        if (fs.opendir) {
+            promises.opendir = util__namespace.promisify(fs.opendir);
+        }
         // handle experimental api warnings.
         // only applies to version of node where promises is a getter property.
         if (promisePropertyDescriptor.get) {
@@ -483,21 +438,19 @@ const patcher = (fs = fs__default['default'], roots) => {
             Object.assign(fs.promises, promises);
         }
     }
-};
-exports.patcher = patcher;
-function isOutPath(root, str) {
-    return !root || (!str.startsWith(root + path__default['default'].sep) && str !== root);
 }
-exports.isOutPath = isOutPath;
-const escapeFunction = (roots) => {
+function isOutPath(root, str) {
+    return !root || (!str.startsWith(root + path__namespace.sep) && str !== root);
+}
+function escapeFunction(roots) {
     // ensure roots are always absolute
-    roots = roots.map(root => path__default['default'].resolve(root));
+    roots = roots.map(root => path__namespace.resolve(root));
     function isEscape(linkTarget, linkPath) {
-        if (!path__default['default'].isAbsolute(linkPath)) {
-            linkPath = path__default['default'].resolve(linkPath);
+        if (!path__namespace.isAbsolute(linkPath)) {
+            linkPath = path__namespace.resolve(linkPath);
         }
-        if (!path__default['default'].isAbsolute(linkTarget)) {
-            linkTarget = path__default['default'].resolve(linkTarget);
+        if (!path__namespace.isAbsolute(linkTarget)) {
+            linkTarget = path__namespace.resolve(linkTarget);
         }
         for (const root of roots) {
             if (isOutPath(root, linkTarget) && !isOutPath(root, linkPath)) {
@@ -508,13 +461,13 @@ const escapeFunction = (roots) => {
         return false;
     }
     return { isEscape, isOutPath };
-};
-exports.escapeFunction = escapeFunction;
+}
 function once(fn) {
     let called = false;
     return (...args) => {
-        if (called)
+        if (called) {
             return;
+        }
         called = true;
         let err = false;
         try {
@@ -531,21 +484,13 @@ function once(fn) {
         }
     };
 }
-});
 
-var subprocess = createCommonjsModule(function (module, exports) {
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.patcher = void 0;
-// this does not actually patch child_process
-// but adds support to ensure the registered loader is included in all nested executions of nodejs.
-
-
-const patcher = (requireScriptName, nodeDir) => {
-    requireScriptName = path__default['default'].resolve(requireScriptName);
-    nodeDir = nodeDir || path__default['default'].join(path__default['default'].dirname(requireScriptName), '_node_bin');
-    const file = path__default['default'].basename(requireScriptName);
+function patcher(requireScriptName, nodeDir) {
+    requireScriptName = path__namespace.resolve(requireScriptName);
+    nodeDir = nodeDir || path__namespace.join(path__namespace.dirname(requireScriptName), '_node_bin');
+    const file = path__namespace.basename(requireScriptName);
     try {
-        fs__default['default'].mkdirSync(nodeDir, { recursive: true });
+        fs__namespace.mkdirSync(nodeDir, { recursive: true });
     }
     catch (e) {
         // with node versions that don't have recursive mkdir this may throw an error.
@@ -553,40 +498,47 @@ const patcher = (requireScriptName, nodeDir) => {
             throw e;
         }
     }
-    if (process.platform == 'win32') {
-        const nodeEntry = path__default['default'].join(nodeDir, 'node.bat');
-        if (!fs__default['default'].existsSync(nodeEntry)) {
-            fs__default['default'].writeFileSync(nodeEntry, `@if not defined DEBUG_HELPER @ECHO OFF
+    let nodeEntry;
+    let nodeEntryContent;
+    if (process.platform === 'win32') {
+        nodeEntry = path__namespace.join(nodeDir, 'node.bat');
+        nodeEntryContent = `@if not defined DEBUG_HELPER @ECHO OFF
 set NP_SUBPROCESS_NODE_DIR=${nodeDir}
 set Path=${nodeDir};%Path%
 "${process.execPath}" ${process.env.NODE_REPOSITORY_ARGS} --require "${requireScriptName}" %*
-`);
-        }
+`;
     }
     else {
-        const nodeEntry = path__default['default'].join(nodeDir, 'node');
-        if (!fs__default['default'].existsSync(nodeEntry)) {
-            fs__default['default'].writeFileSync(nodeEntry, `#!/bin/bash
+        nodeEntry = path__namespace.join(nodeDir, 'node');
+        nodeEntryContent = `#!/bin/bash
 export NP_SUBPROCESS_NODE_DIR="${nodeDir}"
 export PATH="${nodeDir}":\$PATH
 if [[ ! "\${@}" =~ "${file}" ]]; then
-  exec ${process.execPath} ${process.env.NODE_REPOSITORY_ARGS} --require "${requireScriptName}" "$@"
+exec ${process.execPath} ${process.env.NODE_REPOSITORY_ARGS} --require "${requireScriptName}" "$@"
 else
-  exec ${process.execPath} ${process.env.NODE_REPOSITORY_ARGS} "$@"
+exec ${process.execPath} ${process.env.NODE_REPOSITORY_ARGS} "$@"
 fi
-`, { mode: 0o777 });
+`;
+    }
+    try {
+        fs__namespace.writeFileSync(nodeEntry, nodeEntryContent, process.platform === 'win32' ? undefined : { mode: 0o777 });
+    }
+    catch (e) {
+        if (e.code !== 'EEXIST') {
+            throw e;
         }
     }
+    // Override PATH
     if (!process.env.PATH) {
         process.env.PATH = nodeDir;
     }
-    else if (process.env.PATH.indexOf(nodeDir + path__default['default'].delimiter) === -1) {
-        process.env.PATH = nodeDir + path__default['default'].delimiter + process.env.PATH;
+    else if (process.env.PATH.indexOf(nodeDir + path__namespace.delimiter) === -1) {
+        process.env.PATH = nodeDir + path__namespace.delimiter + process.env.PATH;
     }
     // fix execPath so folks use the proxy node
     if (process.platform == 'win32') ;
     else {
-        process.argv[0] = process.execPath = path__default['default'].join(nodeDir, 'node');
+        process.argv[0] = process.execPath = path__namespace.join(nodeDir, 'node');
     }
     // replace any instances of require script in execArgv with the absolute path to the script.
     // example: bazel-require-script.js
@@ -596,71 +548,92 @@ fi
         }
         return v;
     });
-};
-exports.patcher = patcher;
-});
+    // RBE HACK Explicitly share location of node entry
+    process.env.CUSTOM_NODE_ENTRY = nodeEntry;
+}
 
-var src = createCommonjsModule(function (module, exports) {
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.subprocess = exports.fs = void 0;
+// NOTE Trailing '/' not included in matcher to cover all scenarios (e.g. RUNFILES_DIR environment variable)
+const runfilesPathMatcher = '.runfiles';
 /**
- * @license
- * Copyright 2019 The Bazel Authors. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- *
- * You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Infers a runfiles directory from the given path, throwing on failure.
+ * @param maybeRunfilesSource Path to inspect.
  */
-
-
-exports.fs = fs.patcher;
-exports.subprocess = subprocess.patcher;
-});
-
+function inferRunfilesDirFromPath(maybeRunfilesSource) {
+    while (maybeRunfilesSource !== '/') {
+        if (maybeRunfilesSource.endsWith(runfilesPathMatcher)) {
+            return maybeRunfilesSource + '/';
+        }
+        maybeRunfilesSource = path__namespace.dirname(maybeRunfilesSource);
+    }
+    throw new Error('Path does not contain a runfiles parent directory.');
+}
+const removeNulls = (value) => value != null;
+function runfilesLocator() {
+    // Sometimes cwd is under runfiles
+    const cwd = process.cwd();
+    // Runfiles environment variables are the preferred reference point, but can fail
+    const envRunfilesCanidates = [
+        process.env.RUNFILES_DIR,
+        process.env.RUNFILES,
+    ].filter(removeNulls).map(runfilesDir => {
+        const adjustedRunfilesDir = fs__namespace.realpathSync(runfilesDir);
+        if (runfilesDir !== adjustedRunfilesDir) {
+            return adjustedRunfilesDir;
+        }
+        return runfilesDir;
+    });
+    // Infer runfiles dir
+    for (const maybeRunfilesSource of [...envRunfilesCanidates, cwd]) {
+        try {
+            return inferRunfilesDirFromPath(maybeRunfilesSource);
+        }
+        catch (err) {
+            // na-da
+        }
+    }
+    throw new Error('Could not resolve runfiles directory from any data sources.');
+}
 /**
- * @license
- * Copyright 2019 The Bazel Authors. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- *
- * You may obtain a copy of the License at
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Helper to locate bundle (`node_patches.js`) under runfiles.
+ * Implementation is depth sensitive, if bundle is moved this needs to be updated.
  */
+function resolveBundleUnderRunfiles(bundlePath, runfilesPath) {
+    // Get external repos path
+    // /__output-base__/external/__external-repo__/internal/node/node_patches.js
+    // -> /__output-base__/external/
+    const externalReposPath = path__namespace.join(bundlePath, '../../../../');
+    // Get bundle path relative to /external/
+    // /__output-base__/external/__external-repo__/internal/node/node_patches.js
+    // - /__output-base__/external/
+    // -> __external-repo__/internal/node/node_patches.js
+    const bundleRelativeToRunfiles = path__namespace.relative(externalReposPath, bundlePath);
+    // Produce path under runfiles
+    // /__output-base__/execroot/__workspace-name__/bazel-out/__output-config__/bin/foo.runfiles/
+    // + __external-repo__/internal/node/node_patches.js
+    // -> /__output-base__/execroot/__workspace-name__/bazel-out/__output-config__/bin/foo.runfiles/__external-repo__/internal/node/node_patches.js
+    return path__namespace.join(runfilesPath, bundleRelativeToRunfiles);
+}
 
-/**
- * @fileoverview Description of this file.
- */
-
-const { BAZEL_PATCH_ROOTS, NP_SUBPROCESS_NODE_DIR, VERBOSE_LOGS } = process.env;
+const { 
+// Used by fs patcher to detect escapes, and potentially redirect reads/writes
+BAZEL_PATCH_ROOTS, 
+// Set by subprocess patcher, initially generated from `selfUnderRunfilesPath`
+NP_SUBPROCESS_NODE_DIR, 
+// Run Bazel with --define=VERBOSE_LOGS=1 to enable logging
+VERBOSE_LOGS, } = process.env;
+// Patch 'fs' module
 if (BAZEL_PATCH_ROOTS) {
     const roots = BAZEL_PATCH_ROOTS ? BAZEL_PATCH_ROOTS.split(',') : [];
-    if (VERBOSE_LOGS)
-        console.error(`bazel node patches enabled. roots: ${roots} symlinks in these directories will not escape`);
-    const fs = fs__default['default'];
-    src.fs(fs, roots);
+    if (VERBOSE_LOGS) {
+        console
+            .error(`bazel node patches enabled. roots: ${roots} symlinks in these directories will not escape`);
+    }
+    const fs = require('fs');
+    patcher$1(fs, roots);
 }
 else if (VERBOSE_LOGS) {
     console.error(`bazel node patches disabled. set environment BAZEL_PATCH_ROOTS`);
 }
-src.subprocess(__filename, NP_SUBPROCESS_NODE_DIR);
-
-var register = {
-
-};
-
-module.exports = register;
+return;/*disabled to mitigate #incident-20231108-inspiring-flourish*/// Patch subprocess logic
+const selfUnderRunfiles = resolveBundleUnderRunfiles(__filename, runfilesLocator());
+patcher(selfUnderRunfiles, NP_SUBPROCESS_NODE_DIR);

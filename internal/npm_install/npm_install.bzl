@@ -310,6 +310,17 @@ data attribute.
     ),
 })
 
+PROXY_ENVVARS = [
+    "http_proxy",
+    "https_proxy",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+    "ALL_PROXY",
+    "no_proxy",
+    "all_proxy",
+]
+
 def _apply_pre_install_patches(repository_ctx):
     if len(repository_ctx.attr.pre_install_patches) == 0:
         return
@@ -547,6 +558,13 @@ def _check_min_bazel_version(rule, repository_ctx):
             minimum_bazel_version = "0.26.0",
         )
 
+def _propagate_http_proxy_env(repository_ctx, env):
+    """Propagate proxy environment variables if available to repository rule."""
+    os_env = repository_ctx.os.environ
+
+    proxy_env = {k: v for k, v in os_env.items() if k in PROXY_ENVVARS}
+    return dict(env.items() + proxy_env.items())
+
 def _npm_install_impl(repository_ctx):
     """Core implementation of npm_install."""
 
@@ -616,6 +634,8 @@ cd /D "{root}" && "{npm}" {npm_args}
         env[env_key] = "1"
     env["BUILD_BAZEL_RULES_NODEJS_VERSION"] = VERSION
 
+    env = _propagate_http_proxy_env(repository_ctx, env)
+
     # NB: after running npm install, it's essential that we don't cause the repository rule to restart
     # This means we must not reference any additional labels after this point.
     # See https://github.com/bazelbuild/rules_nodejs/issues/2620
@@ -676,6 +696,7 @@ See npm CLI docs https://docs.npmjs.com/cli/install.html for complete list of su
         ),
         "_remove_npm_absolute_paths": attr.label(default = Label("//third_party/github.com/juanjoDiaz/removeNPMAbsolutePaths:bin/removeNPMAbsolutePaths")),
     }),
+    environ = PROXY_ENVVARS,
     doc = """Runs npm install during workspace setup.
 
 This rule will set the environment variable `BAZEL_NPM_INSTALL` to '1' (unless it
@@ -775,6 +796,8 @@ cd /D "{root}" && "{yarn}" {yarn_args}
         env[env_key] = "1"
     env["BUILD_BAZEL_RULES_NODEJS_VERSION"] = VERSION
 
+    env = _propagate_http_proxy_env(repository_ctx, env)
+
     repository_ctx.report_progress("Running yarn install on %s" % repository_ctx.attr.package_json)
     result = repository_ctx.execute(
         [repository_ctx.path("_yarn.cmd" if is_windows_host else "_yarn.sh")],
@@ -862,6 +885,7 @@ to yarn so that the local cache is contained within the external repository.
             allow_single_file = True,
         ),
     }),
+    environ = PROXY_ENVVARS,
     doc = """Runs yarn install during workspace setup.
 
 This rule will set the environment variable `BAZEL_YARN_INSTALL` to '1' (unless it

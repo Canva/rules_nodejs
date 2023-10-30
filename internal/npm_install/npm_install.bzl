@@ -743,17 +743,13 @@ def _yarn_install_impl(repository_ctx):
     # The entry points for npm install for osx/linux and windows
     if not is_windows_host:
         # Prefix filenames with _ so they don't conflict with the npm packages.
-        # Unset YARN_IGNORE_PATH before calling yarn incase it is set so that
-        # .yarnrc yarn-path is followed if set. This is for the case when calling
-        # bazel from yarn with `yarn bazel ...` and yarn follows yarn-path in
-        # .yarnrc it will set YARN_IGNORE_PATH=1 which will prevent the bazel
-        # call into yarn from also following the yarn-path as desired.
+        # Set YARN_IGNORE_PATH=1 so it doesn't go throug our .yarn/releases/yarn.sh wrapper
         repository_ctx.file(
             "_yarn.sh",
             content = """#!/usr/bin/env bash
 # Immediately exit if any command fails.
 set -e
-unset YARN_IGNORE_PATH
+export YARN_IGNORE_PATH=1
 (cd "{root}"; "{yarn}" {yarn_args})
 """.format(
                 root = root,
@@ -766,7 +762,7 @@ unset YARN_IGNORE_PATH
         repository_ctx.file(
             "_yarn.cmd",
             content = """@echo off
-set "YARN_IGNORE_PATH="
+set "YARN_IGNORE_PATH=1"
 cd /D "{root}" && "{yarn}" {yarn_args}
 """.format(
                 root = root,

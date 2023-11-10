@@ -243,7 +243,7 @@ fi
     #
     # Rules such as nodejs_image should use only ctx.toolchains["@build_bazel_rules_nodejs//toolchains/node:toolchain_type"].nodeinfo
     # when building the image as that will reflect the selected --platform.
-    node_tool_files = ctx.files._node[:]
+    node_tool_files = []
     node_tool_files.extend(ctx.toolchains["@build_bazel_rules_nodejs//toolchains/node:toolchain_type"].nodeinfo.tool_files)
 
     node_tool_files.append(ctx.file._link_modules_script)

@@ -115,7 +115,6 @@
         "//   no-effect(2)": "./internal/npm_install/npm_install.bzl:325: no-effect: Expression result is not used. (https://github.com/bazelbuild/buildtools/blob/master/WARNINGS.md#no-effect)",
         "// See comment in .bazelrc": "",
         "bazel:update-deleted-packages": "node ./scripts/update-deleted-packages.js",
-        "update-codeowners": "./scripts/update_codeowners.sh",
         "update-nodejs-versions": "node ./scripts/update-nodejs-versions.js > internal/node/node_versions.bzl",
         "update-esbuild-versions": "node ./scripts/update-esbuild-versions.js > packages/esbuild/esbuild_repo.bzl",
         "format": "git-clang-format",

@@ -39,6 +39,15 @@ _YARN_VERSIONS = {
     "1.19.1": ("yarn-v1.19.1.tar.gz", "yarn-v1.19.1", "34293da6266f2aae9690d59c2d764056053ff7eebc56b80b8df05010c3da9343"),
     "1.22.4": ("yarn-v1.22.4.tar.gz", "yarn-v1.22.4", "bc5316aa110b2f564a71a3d6e235be55b98714660870c5b6b2d2d3f12587fb58"),
     "1.22.10": ("yarn-v1.22.10.tar.gz", "yarn-v1.22.10", "7e433d4a77e2c79e6a7ae4866782608a8e8bcad3ec6783580577c59538381a6e"),
+    "1.22.11": ("yarn-v1.22.11.tar.gz", "yarn-v1.22.11", "2c320de14a6014f62d29c34fec78fdbb0bc71c9ccba48ed0668de452c1f5fe6c"),
+    "1.22.12": ("yarn-v1.22.12.tar.gz", "yarn-v1.22.12", "1bfc6a45ed9788193907d93bfd2070ed805357733d785ae56176705c0ec4cfc1"),
+    "1.22.13": ("yarn-v1.22.13.tar.gz", "yarn-v1.22.13", "92b312f0f159c63bbc4ff5f553da8d9b2ffd6886a53c7d9a678c50e2cf4ed321"),
+    "1.22.14": ("yarn-v1.22.14.tar.gz", "yarn-v1.22.14", "9b0c53cbca3f3cf7cdee35c74db538d54a6abca1c63ef0db10288e165184615d"),
+    "1.22.15": ("yarn-v1.22.15.tar.gz", "yarn-v1.22.15", "0c2841b9423f0fb9657ae6b18873f39551396ec242bfb882b11bed9e4648235e"),
+    "1.22.16": ("yarn-v1.22.16.tar.gz", "yarn-v1.22.16", "c0369d6a9aeb4f3b86095c6e6f64de7a7555a888e03260c3f02727636e1f1693"),
+    "1.22.17": ("yarn-v1.22.17.tar.gz", "yarn-v1.22.17", "267982c61119a055ba2b23d9cf90b02d3d16c202c03cb0c3a53b9633eae37249"),
+    "1.22.18": ("yarn-v1.22.18.tar.gz", "yarn-v1.22.18", "816e5c073b3d35936a398d1fe769ebbcd517298e3510b649e8fc67cd3a62e113"),
+    "1.22.19": ("yarn-v1.22.19.tar.gz", "yarn-v1.22.19", "732620bac8b1690d507274f025f3c6cfdc3627a84d9642e38a07452cc00e0f2e"),
     # When adding a new version. please update /docs/install.md
 }
 

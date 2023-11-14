@@ -27,8 +27,6 @@
         "@bazel/buildifier": "^3.2.0",
         "@bazel/buildozer": "^3.2.0",
         "@bazel/ibazel": "^0.13.1",
-        "@commitlint/cli": "^12.1.4",
-        "@commitlint/config-conventional": "^12.1.4",
         "@gregmagolan/test-a": "0.0.5",
         "@rollup/plugin-commonjs": "18.0.0",
         "@rollup/plugin-json": "4.1.0",

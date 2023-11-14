@@ -788,6 +788,36 @@ cd /D "{root}" && "{yarn}" {yarn_args}
     _symlink_node_modules(repository_ctx)
     _apply_post_install_patches(repository_ctx)
 
+    repository_ctx.report_progress("Removing non-deterministic *.pyc files")
+    result = repository_ctx.execute([
+        "find",
+        repository_ctx.path("node_modules"),
+        "-type",
+        "f",
+        "-name",
+        "*.pyc",
+        "-delete",
+    ])
+    if result.return_code:
+        fail("deleting .pyc files failed: %s (%s)" % (result.stdout, result.stderr))
+
+    repository_ctx.report_progress("Stripping non-deterministic debug symbols from *.node files")
+    result = repository_ctx.execute([
+        "find",
+        repository_ctx.path("node_modules"),
+        "-type",
+        "f",
+        "-name",
+        "*.node",
+        "-exec",
+        "strip",
+        "-S",
+        "{}",
+        ";",
+    ])
+    if result.return_code:
+        fail("stripping .node files failed: %s (%s)" % (result.stdout, result.stderr))
+
     _create_build_files(repository_ctx, "yarn_install", node, repository_ctx.attr.yarn_lock, repository_ctx.attr.generate_local_modules_build_files)
 
 yarn_install = repository_rule(

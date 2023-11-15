@@ -1,0 +1,13 @@
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
+
+exports_files([
+    "main.js",
+    "BUILD.bazel",
+])
+
+write_source_files(
+    name = "write-dist-artifeacts",
+    files = {
+        "main.js": "//internal/linker:src/main.js",
+    },
+)

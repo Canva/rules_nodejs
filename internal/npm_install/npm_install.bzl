@@ -311,10 +311,14 @@ data attribute.
 })
 
 PROXY_ENVVARS = [
-    "HTTP_PROXY",
-    "HTTPS_PROXY",
-    "NO_PROXY",
+    "all_proxy",
     "ALL_PROXY",
+    "http_proxy",
+    "HTTP_PROXY",
+    "https_proxy",
+    "HTTPS_PROXY",
+    "no_proxy",
+    "NO_PROXY",
 ]
 
 def _apply_pre_install_patches(repository_ctx):
@@ -558,7 +562,7 @@ def _propagate_http_proxy_env(repository_ctx, env):
     """Propagate proxy environment variables if available to repository rule."""
     os_env = repository_ctx.os.environ
 
-    proxy_env = {k: v for k, v in os_env.items() if k.upper() in PROXY_ENVVARS}
+    proxy_env = {k: v for k, v in os_env.items() if k in PROXY_ENVVARS}
     return dict(env.items() + proxy_env.items())
 
 def _npm_install_impl(repository_ctx):

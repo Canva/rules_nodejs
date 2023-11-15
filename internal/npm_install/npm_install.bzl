@@ -558,8 +558,6 @@ def _check_min_bazel_version(rule, repository_ctx):
 def _npm_install_impl(repository_ctx):
     """Core implementation of npm_install."""
 
-    _check_min_bazel_version("npm_install", repository_ctx)
-
     # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
     repository_ctx.path(repository_ctx.attr.package_json)
     repository_ctx.path(repository_ctx.attr.yarn_lock)
@@ -570,6 +568,7 @@ def _npm_install_impl(repository_ctx):
     repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
     repository_ctx.path(Label("//internal/npm_install:index.js"))
 
+    _check_min_bazel_version("npm_install", repository_ctx)
     is_windows_host = is_windows_os(repository_ctx)
 
     # Set the base command (install or ci)
@@ -703,8 +702,6 @@ check if yarn is being run by the `npm_install` repository rule.""",
 def _yarn_install_impl(repository_ctx):
     """Core implementation of yarn_install."""
 
-    _check_min_bazel_version("yarn_install", repository_ctx)
-
     # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
     repository_ctx.path(repository_ctx.attr.package_json)
     repository_ctx.path(repository_ctx.attr.yarn_lock)
@@ -715,6 +712,7 @@ def _yarn_install_impl(repository_ctx):
     repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
     repository_ctx.path(Label("//internal/npm_install:index.js"))
 
+    _check_min_bazel_version("yarn_install", repository_ctx)
     is_windows_host = is_windows_os(repository_ctx)
 
     yarn_args = []

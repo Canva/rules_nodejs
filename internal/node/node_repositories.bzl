@@ -242,6 +242,10 @@ If this list is empty, we won't download yarn at all.
         doc = "the specific version of Yarn to install",
         default = "1.19.1",
     ),
+    "yarn_patches": attr.label_keyed_string_dict(
+        doc = "patches to apply to yarn after downloading. keys are the patch files, values are the files those patches should be applied to. only supports changing 1 file per patch.",
+        allow_files = True,
+    ),
 }
 
 BUILT_IN_NODE_PLATFORMS = [
@@ -371,6 +375,10 @@ def _download_yarn(repository_ctx):
         stripPrefix = strip_prefix,
         sha256 = sha256,
     )
+
+    for patch, file in repository_ctx.attr.yarn_patches.items():
+        patch_path = repository_ctx.path(patch)
+        repository_ctx.execute(["patch", file, patch_path], working_directory = YARN_EXTRACT_DIR)
 
     repository_ctx.file("yarn_info", content = """# filename: {filename}
 # strip_prefix: {strip_prefix}

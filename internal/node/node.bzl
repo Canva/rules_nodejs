@@ -583,10 +583,6 @@ Predefined genrule variables are not supported in this context.
         default = Label("//internal/node:node_patches.js"),
         allow_single_file = True,
     ),
-    "_repository_args": attr.label(
-        default = Label("@nodejs//:bin/node_repo_args.sh"),
-        allow_single_file = True,
-    ),
     "_require_patch_template": attr.label(
         default = Label("//internal/node:require_patch.js"),
         allow_single_file = True,

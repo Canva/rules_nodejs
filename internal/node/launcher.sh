@@ -152,6 +152,8 @@ else
   fi
 fi
 
+MAIN="${RUNFILES}/TEMPLATED_entry_point_manifest"
+
 # Export the location of the runfiles helpers script
 export BAZEL_NODE_RUNFILES_HELPER=$(rlocation "TEMPLATED_runfiles_helper_script")
 # Paths can be with lower and upper case on windows because of the msys64 package in the powershell
@@ -214,6 +216,13 @@ for ARG in ${ALL_ARGS[@]+"${ALL_ARGS[@]}"}; do
     --bazel_node_working_dir=*) NODE_WORKING_DIR="${ARG#--bazel_node_working_dir=}" ;;
     # Let users pass through arguments to node itself
     --node_options=*) USER_NODE_OPTIONS+=( "${ARG#--node_options=}" ) ;;
+    # Legacy execroot, for executables that do not yet support running within the runfiles symlink forest
+    # Resolves to actual file path (for source inputs, this is the workspace they came from)
+    --bazel_use_legacy_execroot_paths__variant_rlocation_main) \
+        MAIN=$(rlocation "TEMPLATED_entry_point_manifest") ;;
+    # Resolves to file under Bazel's execroot directory
+    --bazel_use_legacy_execroot_paths__variant_execroot_main) \
+        MAIN="${PWD}/"TEMPLATED_entry_point_execroot_path ;;
     # Remaining argv is collected to pass to the program
     *) ARGS+=( "$ARG" )
   esac
@@ -348,22 +357,9 @@ if [ "$PATCH_REQUIRE" = true ]; then
   # Change the entry point to be the loader.js script so we run code before node
   MAIN=$(rlocation "TEMPLATED_loader_script")
 else
-  # Entry point is the user-supplied script
-  MAIN="${PWD}/"TEMPLATED_entry_point_execroot_path
-  # TODO: after we link-all-bins we should not need this extra lookup
-  if [[ ! -f "$MAIN" ]]; then
-    if [ "$FROM_EXECROOT" = true ]; then
-      MAIN="$EXECROOT/"TEMPLATED_entry_point_execroot_path
-    else
-      MAIN=TEMPLATED_entry_point_manifest_path
-    fi
-  fi
   # Always set up source-map-support using our vendored copy, just like the require_patch_script
   register_source_map_support=$(rlocation build_bazel_rules_nodejs/third_party/github.com/source-map-support/register.js)
   LAUNCHER_NODE_OPTIONS+=( "--require" "${register_source_map_support}" )
-  if [[ -n "TEMPLATED_entry_point_main" ]]; then
-    MAIN="${MAIN}/"TEMPLATED_entry_point_main
-  fi
 fi
 
 # The EXPECTED_EXIT_CODE lets us write bazel tests which assert that

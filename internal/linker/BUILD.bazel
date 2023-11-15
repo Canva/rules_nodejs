@@ -23,8 +23,8 @@ bzl_library(
 filegroup(
     name = "package_contents",
     srcs = [
-        "dist:main.js",
-        "dist:BUILD.bazel",
+        "//internal/linker/dist:main.js",
+        "//internal/linker/dist:BUILD.bazel",
         "link_node_modules.bzl",
         "BUILD.bazel",
     ],

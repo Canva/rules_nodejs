@@ -571,7 +571,7 @@ Predefined genrule variables are not supported in this context.
         allow_single_file = True,
     ),
     "_link_modules_script": attr.label(
-        default = Label("//internal/linker:dist/main.js"),
+        default = Label("//internal/linker/dist:main.js"),
         allow_single_file = True,
     ),
     "_loader_template": attr.label(

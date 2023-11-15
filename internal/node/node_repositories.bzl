@@ -242,6 +242,7 @@ If this list is empty, we won't download yarn at all.
         doc = "the specific version of Yarn to install",
         default = "1.19.1",
     ),
+    "_yarn_increase_mutex_timeout_patch": attr.label(default = "//internal/npm_install:yarn-increase-mutex-timeout.patch"),
 }
 
 BUILT_IN_NODE_PLATFORMS = [
@@ -380,6 +381,9 @@ def _download_yarn(repository_ctx):
         strip_prefix = strip_prefix,
         sha256 = sha256,
     ))
+
+    patch_path = repository_ctx.path(repository_ctx.attr._yarn_increase_mutex_timeout_patch)
+    repository_ctx.execute(["patch", "lib/cli.js", patch_path], working_directory = YARN_EXTRACT_DIR)
 
 def _prepare_node(repository_ctx):
     """Sets up BUILD files and shell wrappers for the versions of NodeJS, npm & yarn just set up.

@@ -738,6 +738,9 @@ def _yarn_install_impl(repository_ctx):
 
     yarn_args = []
 
+    if repository_ctx.attr.ignore_platform:
+        yarn_args.append("--ignore-platform")
+
     # Set frozen lockfile as default install to install the exact version from the yarn.lock
     # file. To perform an yarn install use the vendord yarn binary with:
     # `bazel run @nodejs//:yarn install` or `bazel run @nodejs//:yarn install -- -D <dep-name>`
@@ -904,6 +907,10 @@ to yarn so that the local cache is contained within the external repository.
         "yarn_lock": attr.label(
             mandatory = True,
             allow_single_file = True,
+        ),
+        "ignore_platform": attr.bool(
+            default = False,
+            doc = "Use the --ignore-platform flag for yarn install. Skips platform checks when installing packages.",
         ),
     }),
     environ = PROXY_ENVVARS,

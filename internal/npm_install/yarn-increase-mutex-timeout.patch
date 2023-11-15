@@ -1,0 +1,23 @@
+See https://github.com/yarnpkg/yarn/issues/8960
+TL;DR - NodeJS 18 made `http` timeout connections that don't send headers after 90s
+But some installations can take much longer than that - so if we have another mutex blocked waiting for that install it will
+silently die with exit code 0. Bazel sees this as a success (ofc) then proceeds as if the install succeeded, then dies because
+obviously the install did not succeed (or even begin).
+
+diff --git a/lib/cli.js b/lib/cli.js
+--- a/lib/cli.js
++++ b/lib/cli.js
+@@ -88432,7 +88432,12 @@ var main = exports.main = function () {
+
+         function startServer() {
+           var clients = new (_set || _load_set()).default();
+-          var server = (_http || _load_http()).default.createServer(manager);
++          var server = (_http || _load_http()).default.createServer({
++            // https://github.com/yarnpkg/yarn/issues/8960
++            // this bumps that timeout to the default 5 minutes
++            headersTimeout: 300000,
++            requestTimeout: 300000,
++          }, manager);
+
+           // The server must not prevent us from exiting
+           server.unref();

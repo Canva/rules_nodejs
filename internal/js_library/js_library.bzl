@@ -138,17 +138,14 @@ def _impl(ctx):
 
         # register typings
         if (
-            (
-                file.path.endswith(".d.ts") or
-                file.path.endswith(".d.ts.map") or
-                # package.json may be required to resolve "typings" key
-                file.path.endswith("/package.json")
-            ) and
-            # exclude eg. external/npm/node_modules/protobufjs/node_modules/@types/node/index.d.ts
-            # these would be duplicates of the typings provided directly in another dependency.
-            # also exclude all /node_modules/typescript/lib/lib.*.d.ts files as these are determined by
-            # the tsconfig "lib" attribute
-            len(file.path.split("/node_modules/")) < 3 and file.path.find("/node_modules/typescript/lib/lib.") == -1
+            file.path.endswith(".d.ts") or
+            file.path.endswith(".d.ts.map") or
+            file.path.endswith(".d.cts") or
+            file.path.endswith(".d.cts.map") or
+            file.path.endswith(".d.mts") or
+            file.path.endswith(".d.mts.map") or
+            # package.json may be required to resolve "typings" key
+            file.path.endswith("/package.json")
         ):
             typings.append(file)
 

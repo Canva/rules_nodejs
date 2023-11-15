@@ -26,13 +26,9 @@ workspace(
     },
 )
 
-load("//:index.bzl", "BAZEL_VERSION", "SUPPORTED_BAZEL_VERSIONS", "node_repositories")
+load("//:index.bzl", "SUPPORTED_BAZEL_VERSIONS", "node_repositories")
 
-node_repositories(
-    node_version = "12.18.4",
-    # TODO(alexeagle): upgrade to Node 16 to get native Mac M1 support
-    # node_version = "16.3.0",
-)
+node_repositories(node_version = "18.16.1", yarn_version = "1.22.19")
 
 #
 # Install rules_nodejs dev dependencies
@@ -160,23 +156,6 @@ rules_pkg_dependencies()
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
-
-#
-# RBE configuration
-#
-
-load("@bazel_toolchains//rules:rbe_repo.bzl", "rbe_autoconfig")
-
-# Creates toolchain configuration for remote execution with BuildKite CI
-# for rbe_ubuntu1604
-rbe_autoconfig(
-    name = "buildkite_config",
-)
-
-rbe_autoconfig(
-    name = "rbe_default",
-    bazel_version = BAZEL_VERSION,
-)
 
 load("@build_bazel_integration_testing//tools:repositories.bzl", "bazel_binaries")
 

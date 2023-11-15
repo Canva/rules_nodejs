@@ -31,3 +31,13 @@ write_source_files(
         "dist/main.js": ":src/main.js",
     },
 )
+
+filegroup(
+    name = "package_contents",
+    srcs = [
+        "dist/main.js",
+        "link_node_modules.bzl",
+        "BUILD.bazel",
+    ],
+    visibility = ["//:__pkg__"],
+)

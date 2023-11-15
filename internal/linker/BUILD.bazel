@@ -24,7 +24,7 @@ filegroup(
     name = "package_contents",
     srcs = [
         "dist:main.js",
-        "dist:BUILD.bazel"
+        "dist:BUILD.bazel",
         "link_node_modules.bzl",
         "BUILD.bazel",
     ],

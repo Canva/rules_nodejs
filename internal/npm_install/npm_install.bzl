@@ -469,37 +469,45 @@ def _rerooted_workspace_path(repository_ctx, f):
 def _rerooted_workspace_package_json_dir(repository_ctx):
     return str(repository_ctx.path(_rerooted_workspace_path(repository_ctx, repository_ctx.attr.package_json)).dirname)
 
+def _is_executable(repository_ctx, path):
+    stat_exe = repository_ctx.which("stat")
+    if stat_exe == None:
+        return False
+
+    # A hack to detect if stat is BSD stat as BSD stat does not support --version flag
+    is_bsd_stat = repository_ctx.execute([stat_exe, "--version"]).return_code != 0
+    if is_bsd_stat:
+        stat_args = ["-f", "%Lp", path]
+    else:
+        stat_args = ["-c", "%a", path]
+
+    arguments = [stat_exe] + stat_args
+    exec_result = repository_ctx.execute(arguments)
+    stdout = exec_result.stdout.strip()
+    mode = int(stdout, 8)
+    return mode & 0o100 != 0
+
 def _copy_file(repository_ctx, f):
-    to = _rerooted_workspace_path(repository_ctx, f)
+    src_path = repository_ctx.path(f)
+    dest_path = _rerooted_workspace_path(repository_ctx, f)
+    executable = _is_executable(repository_ctx, src_path)
 
-    # ensure the destination directory exists
-    to_segments = to.split("/")
-    if len(to_segments) > 1:
-        dirname = "/".join(to_segments[:-1])
-        args = ["mkdir", "-p", dirname] if not is_windows_os(repository_ctx) else ["cmd", "/c", "if not exist {dir} (mkdir {dir})".format(dir = dirname.replace("/", "\\"))]
-        result = repository_ctx.execute(
-            args,
-            quiet = repository_ctx.attr.quiet,
-        )
-        if result.return_code:
-            fail("mkdir -p %s failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (dirname, result.stdout, result.stderr))
-
-    # copy the file; don't use the repository_ctx.template trick with empty substitution as this
-    # does not copy over binary files properly
-    cp_args = ["cp", "-f", repository_ctx.path(f), to] if not is_windows_os(repository_ctx) else ["xcopy", "/Y", str(repository_ctx.path(f)).replace("/", "\\"), "\\".join(to_segments) + "*"]
-    result = repository_ctx.execute(
-        cp_args,
-        quiet = repository_ctx.attr.quiet,
+    # Copy the file
+    repository_ctx.file(
+        dest_path,
+        repository_ctx.read(src_path),
+        executable = executable,
+        legacy_utf8 = False,
     )
-    if result.return_code:
-        fail("cp -f {} {} failed: \nSTDOUT:\n{}\nSTDERR:\n{}".format(repository_ctx.path(f), to, result.stdout, result.stderr))
 
 def _symlink_file(repository_ctx, f):
     repository_ctx.symlink(f, _rerooted_workspace_path(repository_ctx, f))
 
 def _copy_data_dependencies(repository_ctx):
     """Add data dependencies to the repository."""
-    for f in repository_ctx.attr.data:
+    total = len(repository_ctx.attr.data)
+    for i, f in enumerate(repository_ctx.attr.data):
+        repository_ctx.report_progress("Copying data dependencies (%s/%s)" % (i, total))
         # Make copies of the data files instead of symlinking
         # as yarn under linux will have trouble using symlinked
         # files as npm file:// packages
@@ -552,9 +560,17 @@ def _npm_install_impl(repository_ctx):
 
     _check_min_bazel_version("npm_install", repository_ctx)
 
-    is_windows_host = is_windows_os(repository_ctx)
+    # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
+    repository_ctx.path(repository_ctx.attr.package_json)
+    repository_ctx.path(repository_ctx.attr.yarn_lock)
+    for f in repository_ctx.attr.data:
+        repository_ctx.path(f)
     node = repository_ctx.path(get_node_label(repository_ctx))
     npm = get_npm_label(repository_ctx)
+    repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
+    repository_ctx.path(Label("//internal/npm_install:index.js"))
+
+    is_windows_host = is_windows_os(repository_ctx)
 
     # Set the base command (install or ci)
     npm_args = [repository_ctx.attr.npm_command]
@@ -689,9 +705,17 @@ def _yarn_install_impl(repository_ctx):
 
     _check_min_bazel_version("yarn_install", repository_ctx)
 
-    is_windows_host = is_windows_os(repository_ctx)
+    # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
+    repository_ctx.path(repository_ctx.attr.package_json)
+    repository_ctx.path(repository_ctx.attr.yarn_lock)
+    for f in repository_ctx.attr.data:
+        repository_ctx.path(f)
     node = repository_ctx.path(get_node_label(repository_ctx))
     yarn = get_yarn_label(repository_ctx)
+    repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
+    repository_ctx.path(Label("//internal/npm_install:index.js"))
+
+    is_windows_host = is_windows_os(repository_ctx)
 
     yarn_args = []
 

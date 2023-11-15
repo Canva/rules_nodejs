@@ -19,12 +19,12 @@ See https://docs.bazel.build/versions/master/skylark/repository_rules.html
 """
 
 load("//internal/common:check_bazel_version.bzl", "check_bazel_version")
-load("//internal/common:os_name.bzl", "OS_ARCH_NAMES", "assert_node_exists_for_host", "node_exists_for_os", "os_name")
+load("//internal/common:os_name.bzl", "OS_ARCH_NAMES", "os_name")
 load("//internal/node:node_versions.bzl", "NODE_VERSIONS")
 load("//third_party/github.com/bazelbuild/bazel-skylib:lib/paths.bzl", "paths")
 load("//toolchains/node:node_toolchain_configure.bzl", "node_toolchain_configure")
 
-_DEFAULT_NODE_VERSION = "12.13.0"
+_DEFAULT_NODE_VERSION = "18.16.1"
 
 # @unsorted-dict-items
 _YARN_VERSIONS = {
@@ -289,9 +289,6 @@ def _download_node(repository_ctx):
 
     node_version = repository_ctx.attr.node_version
 
-    # Skip the download if we know it will fail
-    if not node_exists_for_os(node_version, host_os):
-        return
     node_repositories = repository_ctx.attr.node_repositories
 
     # We insert our default value here, not on the attribute's default, so it isn't documented.
@@ -797,9 +794,6 @@ def node_repositories(**kwargs):
     for os_arch_name in OS_ARCH_NAMES:
         os_name = "_".join(os_arch_name)
 
-        # If we couldn't download node, don't make an external repo for it either
-        if not node_exists_for_os(node_version, os_name):
-            continue
         node_repository_name = "nodejs_%s" % os_name
         _maybe(
             node_repositories_rule,

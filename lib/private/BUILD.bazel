@@ -1,0 +1,17 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//lib/private:utils/strings_test.bzl", "strings_test_suite")
+
+npm_link_all_packages()
+
+bzl_library(
+    name = "bzl-source",
+    srcs = glob(["**/*.bzl"]),
+    deps = [
+        "@aspect_bazel_lib//lib:copy_file",
+        "@bazel_skylib//lib:paths",
+    ],
+    visibility = ["//docs/api:__pkg__"],
+)
+
+strings_test_suite(name = "strings_test")

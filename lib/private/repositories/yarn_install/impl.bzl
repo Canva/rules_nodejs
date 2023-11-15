@@ -1,0 +1,412 @@
+"""
+Install npm packages
+
+Rules to install NodeJS dependencies during WORKSPACE evaluation.
+This happens before the first build or test runs, allowing you to use Bazel
+as the package manager.
+"""
+
+load("//lib/private:repositories/yarn_install/attrs.bzl", "YARN_INSTALL_ATTRS")
+load("//lib/private:utils/check_bazel_version.bzl", "check_bazel_version")
+
+visibility(["//lib/private"])
+
+def _apply_pre_install_patches(rctx):
+    if len(rctx.attr.pre_install_patches) == 0:
+        return
+    if rctx.attr.symlink_node_modules:
+        fail("pre_install_patches cannot be used with symlink_node_modules enabled")
+    _apply_patches(rctx, _WORKSPACE_REROOTED_PATH, rctx.attr.pre_install_patches)
+
+def _apply_post_install_patches(rctx):
+    if len(rctx.attr.post_install_patches) == 0:
+        return
+    if rctx.attr.symlink_node_modules:
+        print("\nWARNING: @%s post_install_patches with symlink_node_modules enabled will run in your workspace and potentially modify source files" % rctx.name)
+    working_directory = _user_workspace_root(rctx) if rctx.attr.symlink_node_modules else _WORKSPACE_REROOTED_PATH
+    marker_file = None
+    if rctx.attr.symlink_node_modules:
+        marker_file = "%s/node_modules/.bazel-post-install-patches" % rctx.path(rctx.attr.package_json).dirname
+    _apply_patches(rctx, working_directory, rctx.attr.post_install_patches, marker_file)
+
+def _apply_patches(rctx, working_directory, patches, marker_file = None):
+    bash_exe = rctx.os.environ["BAZEL_SH"] if "BAZEL_SH" in rctx.os.environ else "bash"
+
+    patch_tool = rctx.attr.patch_tool
+    if not patch_tool:
+        patch_tool = "patch"
+    patch_args = rctx.attr.patch_args
+
+    for patch_file in patches:
+        if marker_file:
+            command = """{patch_tool} {patch_args} < {patch_file}
+CODE=$?
+if [ $CODE -ne 0 ]; then
+    CODE=1
+    if [ -f \"{marker_file}\" ]; then
+        CODE=2
+    fi
+fi
+echo '1' > \"{marker_file}\"
+exit $CODE""".format(
+                patch_tool = patch_tool,
+                patch_file = rctx.path(patch_file),
+                patch_args = " ".join([
+                    "'%s'" % arg
+                    for arg in patch_args
+                ]),
+                marker_file = marker_file,
+            )
+        else:
+            command = "{patch_tool} {patch_args} < {patch_file}".format(
+                patch_tool = patch_tool,
+                patch_file = rctx.path(patch_file),
+                patch_args = " ".join([
+                    "'%s'" % arg
+                    for arg in patch_args
+                ]),
+            )
+
+        if not rctx.attr.quiet:
+            print("@%s appling patch file %s in %s" % (rctx.name, patch_file, working_directory))
+            if marker_file:
+                print("@%s leaving patches marker file %s" % (rctx.name, marker_file))
+        st = rctx.execute(
+            [bash_exe, "-c", command],
+            quiet = rctx.attr.quiet,
+            # Working directory is _ which is where all files are copied to and
+            # where the install is run; patches should be relative to workspace root.
+            working_directory = working_directory,
+        )
+        if st.return_code:
+            # If return code is 2 (see bash snippet above) that means a marker file was found before applying patches;
+            # Treat patch failure as a warning in this case
+            if st.return_code == 2:
+                print("""\nWARNING: @%s failed to apply patch file %s in %s:\n%s%s
+This can happen with symlink_node_modules enabled since your workspace node_modules is re-used between executions of the repository rule.""" % (rctx.name, patch_file, working_directory, st.stderr, st.stdout))
+            else:
+                fail("Error applying patch %s in %s:\n%s%s" % (str(patch_file), working_directory, st.stderr, st.stdout))
+
+def _create_build_files(rctx, rule_type, node, lock_file, generate_local_modules_build_files):
+    rctx.report_progress("Processing node_modules: installing Bazel packages and generating BUILD files")
+    if rctx.attr.manual_build_file_contents:
+        rctx.file("manual_build_file_contents", rctx.attr.manual_build_file_contents)
+
+    # validate links
+    validated_links = {}
+    for k, v in rctx.attr.links.items():
+        if v.startswith("//"):
+            v = "@%s" % v
+        if not v.startswith("@"):
+            fail("link target must be label of form '@wksp//path/to:target', '@//path/to:target' or '//path/to:target'")
+        validated_links[k] = v
+    generate_config_json = struct(
+        exports_directories_only = rctx.attr.exports_directories_only,
+        generate_local_modules_build_files = generate_local_modules_build_files,
+        included_files = rctx.attr.included_files,
+        links = validated_links,
+        package_json = str(rctx.path(rctx.attr.package_json)),
+        package_lock = str(rctx.path(lock_file)),
+        package_path = rctx.attr.package_path,
+        rule_type = rule_type,
+        strict_visibility = rctx.attr.strict_visibility,
+        workspace = rctx.attr.name,
+        workspace_rerooted_path = _WORKSPACE_REROOTED_PATH,
+    ).to_json()
+    rctx.file("generate_config.json", generate_config_json)
+    result = rctx.execute(
+        [node, "index.js"],
+        # double the default timeout in case of many packages, see #2231
+        timeout = 1200,
+        quiet = rctx.attr.quiet,
+    )
+    if result.return_code:
+        fail("generate_build_file.ts failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (result.stdout, result.stderr))
+
+def _add_scripts(rctx):
+    rctx.template(
+        "pre_process_package_json.js",
+        rctx.path(Label("//lib/internal/repositories/yarn_install:pre_process_package_json.js")),
+        {},
+    )
+
+    rctx.template(
+        "index.js",
+        rctx.path(Label("//lib/internal/repositories/yarn_install:index.js")),
+        {},
+    )
+
+# The directory in the external repository where we re-root the workspace by copying
+# package.json, lock file & data files to and running the package manager in the
+# folder of the package.json file.
+_WORKSPACE_REROOTED_PATH = "_"
+
+# Returns the root of the user workspace. No built-in way to get
+# this but we can derive it from the path of the package.json file
+# in the user workspace sources.
+def _user_workspace_root(rctx):
+    package_json = rctx.attr.package_json
+    segments = []
+    if package_json.package:
+        segments.extend(package_json.package.split("/"))
+    segments.extend(package_json.name.split("/"))
+    segments.pop()
+    user_workspace_root = rctx.path(package_json).dirname
+    for i in segments:
+        user_workspace_root = user_workspace_root.dirname
+    return str(user_workspace_root)
+
+# Returns the path to a file within the re-rooted user workspace
+# under _WORKSPACE_REROOTED_PATH in this repo rule's external workspace
+def _rerooted_workspace_path(rctx, f):
+    segments = [_WORKSPACE_REROOTED_PATH]
+    if f.package:
+        segments.append(f.package)
+    segments.append(f.name)
+    return "/".join(segments)
+
+# Returns the path to the package.json directory within the re-rooted user workspace
+# under _WORKSPACE_REROOTED_PATH in this repo rule's external workspace
+def _rerooted_workspace_package_json_dir(rctx):
+    return str(rctx.path(_rerooted_workspace_path(rctx, rctx.attr.package_json)).dirname)
+
+def _copy_file(rctx, f):
+    to = _rerooted_workspace_path(rctx, f)
+
+    # ensure the destination directory exists
+    to_segments = to.split("/")
+    if len(to_segments) > 1:
+        dirname = "/".join(to_segments[:-1])
+        args = ["mkdir", "-p", dirname] if rctx.os.name != "windows" else ["cmd", "/c", "if not exist {dir} (mkdir {dir})".format(dir = dirname.replace("/", "\\"))]
+        result = rctx.execute(
+            args,
+            quiet = rctx.attr.quiet,
+        )
+        if result.return_code:
+            fail("mkdir -p %s failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (dirname, result.stdout, result.stderr))
+
+    # copy the file; don't use the rctx.template trick with empty substitution as this
+    # does not copy over binary files properly
+    cp_args = ["cp", "-f", rctx.path(f), to] if rctx.os.name != "windows" else ["xcopy", "/Y", str(rctx.path(f)).replace("/", "\\"), "\\".join(to_segments) + "*"]
+    result = rctx.execute(
+        cp_args,
+        quiet = rctx.attr.quiet,
+    )
+    if result.return_code:
+        fail("cp -f {} {} failed: \nSTDOUT:\n{}\nSTDERR:\n{}".format(rctx.path(f), to, result.stdout, result.stderr))
+
+def _symlink_file(rctx, f):
+    rctx.symlink(f, _rerooted_workspace_path(rctx, f))
+
+def _copy_data_dependencies(rctx):
+    """Add data dependencies to the repository."""
+    total = len(rctx.attr.data)
+    for i, f in enumerate(rctx.attr.data):
+        rctx.report_progress("Copying data dependencies (%s/%s)" % (i, total))
+        # Make copies of the data files instead of symlinking
+        # as yarn under linux will have trouble using symlinked
+        # files as npm file:// packages
+        _copy_file(rctx, f)
+
+def _add_node_repositories_info_deps(rctx):
+    pass
+    # Add a dep to the node_info & yarn_info files from node_repositories
+    # so that if the node or yarn versions change we re-run the repository rule
+    # rctx.symlink(
+    #     Label("@nodejs//:node_info"),
+    #     rctx.path("_node_info"),
+    # )
+    # rctx.symlink(
+    #     Label("@nodejs//:yarn_info"),
+    #     rctx.path("_yarn_info"),
+    # )
+
+def _symlink_node_modules(rctx):
+    package_json_dir = rctx.path(rctx.attr.package_json).dirname
+    if rctx.attr.symlink_node_modules:
+        rctx.symlink(
+            rctx.path(str(package_json_dir) + "/node_modules"),
+            rctx.path("node_modules"),
+        )
+    else:
+        rctx.symlink(
+            rctx.path(_rerooted_workspace_package_json_dir(rctx) + "/node_modules"),
+            rctx.path("node_modules"),
+        )
+
+def _check_min_bazel_version(rule, rctx):
+    if rctx.attr.symlink_node_modules:
+        # When using symlink_node_modules enforce the minimum Bazel version required
+        check_bazel_version(
+            message = """
+        A minimum Bazel version of 0.26.0 is required for the %s @%s repository rule.
+
+        By default, yarn_install and npm_install in build_bazel_rules_nodejs >= 0.30.0
+        depends on the managed directory feature added in Bazel 0.26.0. See
+        https://github.com/bazelbuild/rules_nodejs/wiki#migrating-to-rules_nodejs-030.
+
+        You can opt out of this feature by setting `symlink_node_modules = False`
+        on all of your yarn_install & npm_install rules.
+        """ % (rule, rctx.attr.name),
+            minimum_bazel_version = "0.26.0",
+        )
+
+def _yarn_install_impl(rctx):
+    """Core implementation of yarn_install."""
+
+    _check_min_bazel_version("yarn_install", rctx)
+
+    # Mark inputs as dependencies with rctx.path to reduce repo fetch restart costs
+    rctx.path(rctx.attr.package_json)
+    rctx.path(rctx.attr.yarn_lock)
+    for f in rctx.attr.data:
+        rctx.path(f)
+    node = rctx.path(rctx.attr.host_node_bin)
+    yarn = rctx.attr.host_yarn_bin
+    rctx.path(Label("//lib/internal/repositories/yarn_install:pre_process_package_json.js"))
+    rctx.path(Label("//lib/internal/repositories/yarn_install:index.js"))
+    # TODO These are present supposedly to ensure the repo reruns when node/yarn changes, but may be unnecessary
+    # rctx.path(Label("@nodejs//:node_info"))
+    # rctx.path(Label("@nodejs//:yarn_info"))
+
+    is_windows_host = rctx.os.name == "windows"
+
+    yarn_args = []
+
+    # Set frozen lockfile as default install to install the exact version from the yarn.lock
+    # file. To perform an yarn install use the vendord yarn binary with:
+    # `bazel run @nodejs//:yarn install` or `bazel run @nodejs//:yarn install -- -D <dep-name>`
+    if rctx.attr.frozen_lockfile:
+        yarn_args.append("--frozen-lockfile")
+
+    if not rctx.attr.use_global_yarn_cache:
+        yarn_args.extend(["--cache-folder", str(rctx.path("_yarn_cache"))])
+    else:
+        # Multiple yarn rules cannot run simultaneously using a shared cache.
+        # See https://github.com/yarnpkg/yarn/issues/683
+        # The --mutex option ensures only one yarn runs at a time, see
+        # https://yarnpkg.com/en/docs/cli#toc-concurrency-and-mutex
+        # The shared cache is not necessarily hermetic, but we need to cache downloaded
+        # artifacts somewhere, so we rely on yarn to be correct.
+        yarn_args.extend(["--mutex", "network"])
+    yarn_args.extend(rctx.attr.args)
+
+    # Run the package manager in the package.json folder
+    if rctx.attr.symlink_node_modules:
+        root = str(rctx.path(rctx.attr.package_json).dirname)
+    else:
+        root = str(rctx.path(_rerooted_workspace_package_json_dir(rctx)))
+
+    # The entry points for npm install for osx/linux and windows
+    if not is_windows_host:
+        # Prefix filenames with _ so they don't conflict with the npm packages.
+        # Unset YARN_IGNORE_PATH before calling yarn incase it is set so that
+        # .yarnrc yarn-path is followed if set. This is for the case when calling
+        # bazel from yarn with `yarn bazel ...` and yarn follows yarn-path in
+        # .yarnrc it will set YARN_IGNORE_PATH=1 which will prevent the bazel
+        # call into yarn from also following the yarn-path as desired.
+        rctx.file(
+            "_yarn.sh",
+            content = """#!/usr/bin/env bash
+# Immediately exit if any command fails.
+set -e
+unset YARN_IGNORE_PATH
+(cd "{root}"; "{yarn}" {yarn_args})
+""".format(
+                root = root,
+                yarn = rctx.path(yarn),
+                yarn_args = " ".join(yarn_args),
+            ),
+            executable = True,
+        )
+    else:
+        rctx.file(
+            "_yarn.cmd",
+            content = """@echo off
+set "YARN_IGNORE_PATH="
+cd /D "{root}" && "{yarn}" {yarn_args}
+""".format(
+                root = root,
+                yarn = rctx.path(yarn),
+                yarn_args = " ".join(yarn_args),
+            ),
+            executable = True,
+        )
+
+    _symlink_file(rctx, rctx.attr.yarn_lock)
+    _copy_file(rctx, rctx.attr.package_json)
+    _copy_data_dependencies(rctx)
+    _add_scripts(rctx)
+    _add_node_repositories_info_deps(rctx)
+    _apply_pre_install_patches(rctx)
+
+    result = rctx.execute(
+        [node, "pre_process_package_json.js", rctx.path(rctx.attr.package_json), "yarn"],
+        quiet = rctx.attr.quiet,
+    )
+    if result.return_code:
+        fail("pre_process_package_json.js failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (result.stdout, result.stderr))
+
+    env = dict(rctx.attr.environment)
+    env_key = "BAZEL_YARN_INSTALL"
+    if env_key not in env.keys():
+        env[env_key] = "1"
+    # TODO Sort out version, or remove env var
+    env["BUILD_BAZEL_RULES_NODEJS_VERSION"] = "----"
+
+    rctx.report_progress("Running yarn install on %s" % rctx.attr.package_json)
+    result = rctx.execute(
+        [rctx.path("_yarn.cmd" if is_windows_host else "_yarn.sh")],
+        timeout = rctx.attr.timeout,
+        quiet = rctx.attr.quiet,
+        environment = env,
+    )
+    if result.return_code:
+        fail("yarn_install failed: %s (%s)" % (result.stdout, result.stderr))
+
+    _symlink_node_modules(rctx)
+    _apply_post_install_patches(rctx)
+
+    result = rctx.execute([
+        "find",
+        rctx.path("node_modules"),
+        "-type",
+        "f",
+        "-name",
+        "*.pyc",
+        "-delete",
+    ])
+    if result.return_code:
+        fail("deleting .pyc files failed: %s (%s)" % (result.stdout, result.stderr))
+    result = rctx.execute([
+        "find",
+        rctx.path("node_modules"),
+        "-type",
+        "f",
+        "-name",
+        "*.node",
+        "-exec",
+        "strip",
+        "-S",
+        "{}",
+        ";",
+    ])
+    if result.return_code:
+        fail("stripping .node files failed: %s (%s)" % (result.stdout, result.stderr))
+
+    _create_build_files(rctx, "yarn_install", node, rctx.attr.yarn_lock, rctx.attr.generate_local_modules_build_files)
+
+yarn_install = repository_rule(
+    implementation = _yarn_install_impl,
+    attrs = YARN_INSTALL_ATTRS,
+    environ = [
+        "BAZEL_SH",
+    ],
+    doc = """
+        Runs yarn install during workspace setup.
+
+        This rule will set the environment variable `BAZEL_YARN_INSTALL` to '1' (unless it
+        set to another value in the environment attribute). Scripts may use to this to
+        check if yarn is being run by the `yarn_install` repository rule.
+    """,
+)

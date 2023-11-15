@@ -1,0 +1,11 @@
+exports_files([
+    "extensions.bzl",
+    "providers.bzl",
+    "rules.bzl",
+    "toolchains.bzl",
+])
+
+toolchain_type(
+    name = "nodejs_toolchain_type",
+    visibility = ["//visibility:public"],
+)

@@ -1,0 +1,32 @@
+module(
+    name = "bazel_6_litmus",
+    version = "0.0.0",
+    compatibility_level = 0,
+)
+
+bazel_dep(name = "build_bazel_rules_nodejs", version = "3.8.0")
+
+local_path_override(
+    module_name = "build_bazel_rules_nodejs",
+    path = "../..",
+)
+
+nodejs = use_extension("@build_bazel_rules_nodejs//lib:extensions.bzl", "nodejs")
+nodejs.download(
+    node_version = "20.8.0",
+    yarn_version = "1.22.10",
+)
+use_repo(nodejs, "nodejs")
+use_repo(nodejs, "nodejs_host")
+
+register_toolchains("@nodejs//toolchains:all")
+
+node_modules = use_extension("@build_bazel_rules_nodejs//lib:extensions.bzl", "node_modules")
+node_modules.yarn(
+    name = "node_modules",
+    package_json = "//:package.json",
+    yarn_lock = "//:yarn.lock",
+    host_node_bin = "@nodejs_host//:bin/node",
+    host_yarn_bin = "@nodejs_host//:bin/yarn",
+)
+use_repo(node_modules, "node_modules")

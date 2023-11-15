@@ -1,0 +1,47 @@
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+
+exports_files([
+    "npm_script_generater.js",
+    "packager.js",
+])
+
+write_source_files(
+    name = "write-dist-artifeacts",
+    files = {
+        "npm_script_generater.js": ":__npm_script_generater.js",
+        "packager.js": ":__packager.js",
+    },
+    executable = True,
+)
+
+write_file(
+    name = "script-npm-script-generator",
+    out = "__npm_script_generater.js",
+    content = ["// TODO see internal/pkg_npm/npm_script_generator.js in old"],
+    # TODO Remove this
+    is_executable = True,
+)
+
+write_file(
+    name = "script-packager",
+    out = "__packager.js",
+    content = ["// TODO see internal/pkg_npm/packager.js in old"],
+    # TODO Remove this
+    is_executable = True,
+)
+
+# TODO Replace these with nodejs_binary rules
+
+native_binary(
+    name = "npm_script_generator",
+    src = "npm_script_generater.js",
+    out = "npm_script_generator-bin",
+)
+
+native_binary(
+    name = "packager",
+    src = "packager.js",
+    out = "packager-bin",
+)

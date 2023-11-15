@@ -1,0 +1,48 @@
+load("@aspect_rules_rollup//rollup:defs.bzl", "rollup")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+npm_link_all_packages()
+
+ts_project(
+    name = "runfiles_helper",
+    srcs = glob(
+        ["src/**/*.ts"],
+        exclude = ["src/**/*.tests.ts"],
+    ) + [":package.json"],
+    deps = [
+        ":node_modules/@types/node",
+    ],
+)
+
+rollup(
+    name = "runfiles_helper_public",
+    entry_points = {
+        ":src/helper_mod.js": "runfiles_public",
+    },
+    srcs = [":runfiles_helper"],
+    format = "cjs",
+    node_modules = ":node_modules",
+    args = ["--external", "path,fs"],
+    sourcemap = "hidden",
+    silent_on_success = True,
+    visibility = [
+        "//lib/internal/rules/nodejs_binary_test:__pkg__"
+    ],
+)
+
+rollup(
+    name = "runfiles_helper_internal",
+    entry_points = {
+        ":src/mod.js": "runfiles_internal",
+    },
+    srcs = [":runfiles_helper"],
+    format = "cjs",
+    node_modules = ":node_modules",
+    args = ["--external", "path,fs"],
+    sourcemap = "hidden",
+    silent_on_success = True,
+    visibility = [
+        "//lib/internal/rules/nodejs_binary_test:__pkg__"
+    ],
+)

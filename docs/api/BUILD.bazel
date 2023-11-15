@@ -1,0 +1,40 @@
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+write_source_files(
+    name = "write-api-docs",
+    files = {
+        "extensions.md": ":__extensions.md",
+        "providers.md": ":__providers.md",
+        "rules.md": ":__rules.md",
+        "toolchains.md": ":__toolchains.md",
+    },
+)
+
+stardoc(
+    name = "extensions-docs",
+    input = "//lib:extensions.bzl",
+    deps = ["//lib/private:bzl-source"],
+    out = "__extensions.md",
+)
+
+stardoc(
+    name = "providers-docs",
+    input = "//lib:providers.bzl",
+    deps = ["//lib/private:bzl-source"],
+    out = "__providers.md",
+)
+
+stardoc(
+    name = "rules-docs",
+    input = "//lib:rules.bzl",
+    deps = ["//lib/private:bzl-source"],
+    out = "__rules.md",
+)
+
+stardoc(
+    name = "toolchains-docs",
+    input = "//lib:toolchains.bzl",
+    deps = ["//lib/private:bzl-source"],
+    out = "__toolchains.md",
+)

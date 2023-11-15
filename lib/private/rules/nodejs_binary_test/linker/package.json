@@ -1,0 +1,6 @@
+{
+    "type": "commonjs",
+    "dependencies": {
+        "@types/node": "^20.8.4"
+    }
+}

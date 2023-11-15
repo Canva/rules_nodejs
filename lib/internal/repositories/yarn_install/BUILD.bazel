@@ -1,0 +1,14 @@
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
+
+exports_files([
+    "pre_process_package_json.js",
+    "index.js",
+])
+
+write_source_files(
+    name = "write-dist-artifeacts",
+    files = {
+        "pre_process_package_json.js": "//lib/private/repositories/yarn_install/pre_process_package_json:src/main.js",
+        "index.js": "//lib/private/repositories/yarn_install/generate_build_file:src/main.js",
+    },
+)

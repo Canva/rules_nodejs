@@ -1,0 +1,25 @@
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
+
+exports_files([
+    "launcher.sh",
+    "lcov_merger-js.js",
+    "linker.js",
+    "loader.js",
+    "node_patches.js",
+    "require_patch.js",
+    "runfiles_bundle.js",
+    "runfiles_main.js",
+])
+
+write_source_files(
+    name = "write-dist-artifeacts",
+    files = {
+        "lcov_merger-js.js": "//lib/private/rules/nodejs_binary_test/lcov_merger:src/main.js",
+        "linker.js": "//lib/private/rules/nodejs_binary_test/linker:src/main.js",
+        "loader.js": "//lib/private/rules/nodejs_binary_test/loader:src/main.js",
+        "node_patches.js": "//lib/private/rules/nodejs_binary_test/node_patches:node_patches.js",
+        "require_patch.js": "//lib/private/rules/nodejs_binary_test/require_patch:src/main.js",
+        "runfiles_bundle.js": "//lib/private/rules/nodejs_binary_test/runfiles_helper:runfiles_internal.js",
+        "runfiles_main.js": "//lib/private/rules/nodejs_binary_test/runfiles_helper:runfiles_public.js",
+    },
+)

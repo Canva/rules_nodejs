@@ -27,8 +27,6 @@
         "@bazel/buildifier": "^3.2.0",
         "@bazel/buildozer": "^3.2.0",
         "@bazel/ibazel": "^0.13.1",
-        "@commitlint/cli": "^12.1.4",
-        "@commitlint/config-conventional": "^12.1.4",
         "@gregmagolan/test-a": "0.0.5",
         "@rollup/plugin-commonjs": "18.0.0",
         "@rollup/plugin-json": "4.1.0",
@@ -49,7 +47,6 @@
         "hello": "file:./tools/npm_packages/hello",
         "history-server": "^1.3.1",
         "http-server": "^0.11.1",
-        "husky": "1.3.1",
         "is-builtin-module": "3.0.0",
         "jasmine": "~3.4.0",
         "jasmine-core": "~3.4.0",
@@ -118,7 +115,6 @@
         "//   no-effect(2)": "./internal/npm_install/npm_install.bzl:325: no-effect: Expression result is not used. (https://github.com/bazelbuild/buildtools/blob/master/WARNINGS.md#no-effect)",
         "// See comment in .bazelrc": "",
         "bazel:update-deleted-packages": "node ./scripts/update-deleted-packages.js",
-        "update-codeowners": "./scripts/update_codeowners.sh",
         "update-nodejs-versions": "node ./scripts/update-nodejs-versions.js > internal/node/node_versions.bzl",
         "update-esbuild-versions": "node ./scripts/update-esbuild-versions.js > packages/esbuild/esbuild_repo.bzl",
         "format": "git-clang-format",
@@ -126,11 +122,5 @@
         "stardoc": "bazel build --noincompatible_strict_action_env //docs && cp -f dist/bin/docs/*.md ./docs && cp -f dist/bin/docs/docs-out/*.html ./docs && cp -f dist/bin/docs/docs-out/css/*.css ./docs/css",
         "version": "conventional-changelog -p angular -i CHANGELOG.md -s && node ./scripts/on-version.js && bazel build //:release && node ./scripts/on-release.js && git stage version.bzl docs/install.md packages/create/index.js README.md CHANGELOG.md e2e/*/WORKSPACE examples/*/WORKSPACE",
         "postinstall": "patch-package && node internal/npm_install/test/postinstall.js"
-    },
-    "husky": {
-        "hooks": {
-            "pre-push": "check-clang-format \"yarn format\"",
-            "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-        }
     }
 }

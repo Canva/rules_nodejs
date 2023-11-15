@@ -1,0 +1,17 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  build:
+    name: builds the package
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: bazelbuild/setup-bazelisk@v2
+    - run: bazel build :release
+    - uses: actions/upload-artifact@v3
+      with:
+        name: release.tar.gz
+        path: dist/bin/release.tar.gz

@@ -38,6 +38,10 @@ load("//:package.bzl", "rules_nodejs_dev_dependencies")
 
 rules_nodejs_dev_dependencies()
 
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
+rules_proto_dependencies()
+
 #
 # Setup local respositories
 #
@@ -79,15 +83,6 @@ load("@build_bazel_rules_typescript//:package.bzl", "rules_typescript_dev_depend
 
 rules_typescript_dev_dependencies()
 
-# Install labs dependencies
-load("//packages/labs:package.bzl", "npm_bazel_labs_dependencies")
-
-npm_bazel_labs_dependencies()
-
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
-
-rules_proto_dependencies()
-
 rules_proto_toolchains()
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
@@ -103,18 +98,6 @@ load("@build_bazel_rules_typescript//internal:ts_repositories.bzl", "ts_setup_de
 
 ts_setup_dev_workspace()
 
-#
-# Install @bazel/cypress dependencies
-#
-load("//packages/cypress:index.bzl", "cypress_repository")
-
-cypress_repository(
-    name = "cypress",
-    cypress_bin = "@cypress_deps//:node_modules/cypress/bin/cypress",
-    # Currently cypress cannot be installed on our Linux/Windows CI machines
-    fail_on_error = False,
-)
-
 # Setup the rules_webtesting toolchain
 load("@io_bazel_rules_webtesting//web:repositories.bzl", "web_test_repositories")
 
@@ -126,11 +109,6 @@ browser_repositories(
     chromium = True,
     firefox = True,
 )
-
-# Setup esbuild dependencies
-load("//packages/esbuild:esbuild_repo.bzl", "esbuild_dependencies")
-
-esbuild_dependencies()
 
 #
 # Dependencies to run stardoc & generating documentation

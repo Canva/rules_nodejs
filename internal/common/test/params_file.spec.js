@@ -16,6 +16,7 @@
  */
 'use strict';
 
+const assert = require('assert/strict');
 const runfiles = require(process.env['BAZEL_NODE_RUNFILES_HELPER']);
 
 // The arguments are passed via a params file
@@ -50,8 +51,4 @@ const expected = [
   'build_bazel_rules_nodejs/package.json',
 ];
 
-describe('params_file', function() {
-  it('should handle args substitutions', function() {
-    expect(actual).toEqual(expected);
-  });
-});
+assert.deepEqual(actual, expected, 'params_file arguments did not match');

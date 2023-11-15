@@ -76,6 +76,16 @@ def rules_nodejs_dev_dependencies():
 
     _maybe(
         http_archive,
+        name = "rules_proto",
+        sha256 = "aa1ee19226f707d44bee44c720915199c20c84a23318bb0597ed4e5c873ccbd5",
+        strip_prefix = "rules_proto-40298556293ae502c66579620a7ce867d5f57311",
+        urls = [
+            "https://github.com/bazelbuild/rules_proto/archive/40298556293ae502c66579620a7ce867d5f57311.tar.gz",
+        ],
+    )
+
+    _maybe(
+        http_archive,
         name = "build_bazel_integration_testing",
         urls = [
             "https://github.com/bazelbuild/bazel-integration-testing/archive/165440b2dbda885f8d1ccb8d0f417e6cf8c54f17.zip",

@@ -13,9 +13,12 @@
 # limitations under the License.
 
 load("@build_bazel_rules_nodejs//:index.bzl", "BAZEL_VERSION", "nodejs_test")
+load("@pnpm//:defs.bzl", "npm_link_all_packages")
 load("//internal/node:context.bzl", "node_context_data")
 
 package(default_visibility = ["//visibility:public"])
+
+npm_link_all_packages()
 
 exports_files(["npm_version_check.js"])
 

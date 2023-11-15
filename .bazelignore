@@ -14,3 +14,6 @@ examples/user_managed_deps/node_modules
 # **/dist
 dist
 examples/user_managed_deps/dist
+
+internal/node_modules
+internal/linker/node_modules

@@ -1,29 +1,18 @@
-# BEGIN-INTERNAL
+load("@aspect_bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("//:index.bzl", "js_library")
-load("//packages/typescript:checked_in_ts_project.bzl", "checked_in_ts_project")
+load("@pnpm//:defs.bzl", "npm_link_all_packages")
 
-# We can't bootstrap the ts_library rule using the linker itself,
-# because the implementation of ts_library depends on the linker so that would be a cycle.
-# So we compile it to JS and check in the result as index.js.
-# To update index.js run:
-#   bazel run //internal/linker:linker_lib_check_compiled.update
-checked_in_ts_project(
-    name = "linker_lib",
-    src = "link_node_modules.ts",
-    checked_in_js = "index.js",
-    visibility = ["//internal/linker:__subpackages__"],
-    deps = [
-        "//packages/runfiles:bazel_runfiles",
-        "@npm//@types/node",
+npm_link_all_packages()
+
+ts_project(
+    name = "linker",
+    srcs = [
+        "src/main.ts",
     ],
-)
-
-js_library(
-    name = "linker_js",
-    srcs = ["index.js"],
-    visibility = ["//internal/linker/test:__pkg__"],
-    deps = ["//internal/runfiles:runfiles_js"],
+    deps = [
+        ":node_modules/@types/node",
+    ],
 )
 
 bzl_library(
@@ -32,18 +21,13 @@ bzl_library(
     visibility = ["//visibility:public"],
 )
 
-# END-INTERNAL
 exports_files([
-    "index.js",
+    "dist/main.js",
 ])
 
-filegroup(
-    name = "package_contents",
-    srcs = glob([
-        "*.bzl",
-        "*.js",
-    ]) + [
-        "BUILD.bazel",
-    ],
-    visibility = ["//:__pkg__"],
+write_source_files(
+    name = "write-dist-artifeacts",
+    files = {
+        "dist/main.js": ":src/main.js",
+    },
 )

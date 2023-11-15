@@ -591,7 +591,7 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
     # The entry points for yarn for osx/linux and windows.
     # Runs yarn using appropriate node entry point.
-    # Set YARN_IGNORE_PATH=1 so it doesn't go throug our .yarn/releases/yarn.sh wrapper
+    # Set YARN_IGNORE_PATH=1 so it doesn't go through wrappers set by `yarn-path` https://classic.yarnpkg.com/lang/en/docs/yarnrc/#toc-yarn-path
     if not is_windows:
         # Yarn entry point
         repository_ctx.file(

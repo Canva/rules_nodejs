@@ -743,7 +743,7 @@ def _yarn_install_impl(repository_ctx):
     # The entry points for npm install for osx/linux and windows
     if not is_windows_host:
         # Prefix filenames with _ so they don't conflict with the npm packages.
-        # Set YARN_IGNORE_PATH=1 so it doesn't go throug our .yarn/releases/yarn.sh wrapper
+        # Set YARN_IGNORE_PATH=1 so it doesn't go through wrappers set by `yarn-path` https://classic.yarnpkg.com/lang/en/docs/yarnrc/#toc-yarn-path
         repository_ctx.file(
             "_yarn.sh",
             content = """#!/usr/bin/env bash

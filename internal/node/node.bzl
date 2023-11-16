@@ -194,6 +194,9 @@ def _nodejs_binary_impl(ctx):
     # Provide the target name as an environment variable avaiable to all actions for the
     # runfiles helpers to use.
     env_vars = "export BAZEL_TARGET=%s\n" % ctx.label
+    # Ensure JS-based persistent workers can recreate `node_modules` symlinks if required by
+    # providing a place with the information.
+    env_vars += """export NM_SYMLINK="$(mktemp -d)/nm-symlinks.json"\n"""
 
     # Add all env vars from the ctx attr
     for [key, value] in ctx.attr.env.items():

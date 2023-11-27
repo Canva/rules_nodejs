@@ -578,7 +578,7 @@ def _npm_install_impl(repository_ctx):
 
     # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
     repository_ctx.path(repository_ctx.attr.package_json)
-    repository_ctx.path(repository_ctx.attr.yarn_lock)
+    repository_ctx.path(repository_ctx.attr.package_lock_json)
     for f in repository_ctx.attr.data:
         repository_ctx.path(f)
     node = repository_ctx.path(get_node_label(repository_ctx))

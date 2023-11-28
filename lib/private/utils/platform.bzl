@@ -2,7 +2,7 @@
 Platform information and resolvers.
 """
 
-visibility(["//lib/private"])
+visibility(["//lib/private", "//lib"])
 
 PLATFORMS = {
     # Used to uniquely identify a given platform

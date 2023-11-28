@@ -6,7 +6,7 @@ See https://docs.bazel.build/versions/master/skylark/repository_rules.html
 """
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("//lib/private:repositories/nodejs_download/attrs.bzl", "ATTRS")
+load("//lib/private:repositories/nodejs_download/attrs.bzl", "ATTRS", "COMMON_ATTRS")
 load("//lib/private:repositories/nodejs_download/data/node_versions.bzl", "NODE_VERSIONS")
 load("//lib/private:repositories/nodejs_download/data/yarn_versions.bzl", "YARN_VERSIONS")
 load("//lib/private:utils/platform.bzl", "get_platform")
@@ -110,8 +110,6 @@ _DOC = """
     Note that the dependency installation scripts will run in each subpackage indicated by the `package_json` attribute.
 """
 
-_ATTRS = ATTRS
-
 NODE_EXTRACT_DIR = "bin/nodejs"
 YARN_EXTRACT_DIR = "bin/yarnpkg"
 
@@ -136,7 +134,12 @@ def _download_node(repository_ctx):
     Args:
       repository_ctx: The repository rule context
     """
-    platform = get_platform(repository_ctx.os.name, repository_ctx.os.arch)
+    platform = None
+    if not hasattr(repository_ctx.attr, "os"):
+        # Exclusively for the `@*_host` repository when using workspace-based dependency management
+        platform = get_platform(repository_ctx.os.name, repository_ctx.os.arch)
+    else:
+        platform = get_platform(repository_ctx.attr.os, repository_ctx.attr.arch)
 
     node_version = repository_ctx.attr.node_version
     node_repositories = repository_ctx.attr.node_repositories
@@ -248,8 +251,8 @@ def _prepare_node(repository_ctx):
       repository_ctx: The repository rule context
     """
 
-    # TODO: Maybe we want to encode the OS as a specific attribute rather than do it based on naming?
-    is_windows = "windows" == repository_ctx.attr.os
+    # Exclusively for the `@*_host` repository when using workspace-based dependency management
+    is_windows = "windows" == getattr(repository_ctx.attr, "os", repository_ctx.os.name)
 
     node_path = NODE_EXTRACT_DIR
     node_package = NODE_EXTRACT_DIR
@@ -585,10 +588,15 @@ def _nodejs_download_impl(repository_ctx):
     _download_yarn(repository_ctx)
     _prepare_node(repository_ctx)
 
-# Users should call the `node_repositories` wrapper macro.
-# This is exposed for stardoc.
 nodejs_download = repository_rule(
     _nodejs_download_impl,
     doc = _DOC,
-    attrs = _ATTRS,
+    attrs = ATTRS,
+)
+
+# Exclusively for the `@*_host` repository when using workspace-based dependency management
+nodejs_download_host = repository_rule(
+    _nodejs_download_impl,
+    doc = _DOC,
+    attrs = COMMON_ATTRS,
 )

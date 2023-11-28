@@ -90,19 +90,19 @@ def get_platform(os, arch):
     """
 
     if os == "linux":
-        if arch == "x86_64":
+        if arch == "x86_64" or arch == "amd64":
             return PLATFORMS["linux_amd64"]
-        elif arch == "aarch64":
+        elif arch == "arm64" or arch == "aarch64":
             return PLATFORMS["linux_arm64"]
         elif arch == "s390x":
             return PLATFORMS["linux_s390x"]
     elif os.startswith("mac os") or os == "darwin":
-        if arch == "x86_64":
+        if arch == "x86_64" or arch == "amd64":
             return PLATFORMS["darwin_amd64"]
         elif arch == "arm64" or arch == "aarch64":
             return PLATFORMS["darwin_arm64"]
     elif os == "windows":
-        if arch == "x86_64":
+        if arch == "x86_64" or arch == "amd64":
             return PLATFORMS["windows_amd64"]
         elif arch == "arm64" or arch == "aarch64":
             return PLATFORMS["windows_arm64"]

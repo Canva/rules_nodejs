@@ -9,7 +9,7 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//lib/private:repositories/nodejs_download/attrs.bzl", "ATTRS")
 load("//lib/private:repositories/nodejs_download/data/node_versions.bzl", "NODE_VERSIONS")
 load("//lib/private:repositories/nodejs_download/data/yarn_versions.bzl", "YARN_VERSIONS")
-load("//lib/private:utils/os_name.bzl", "assert_node_exists_for_host", "node_exists_for_os", "os_name")
+load("//lib/private:utils/platform.bzl", "get_platform")
 load("//lib/private:utils/strings.bzl", "dedent")
 
 visibility(["//lib/private"])
@@ -151,16 +151,9 @@ def _download_node(repository_ctx):
         ))
         return
 
-    # The host is baked into the repository name by design.
-    # Current these workspaces are:
-    # @nodejs_PLATFORM where PLATFORM is one of BUILT_IN_NODE_PLATFORMS
-    host_os = os_name(repository_ctx)
+    platform = get_platform(repository_ctx.os.name, repository_ctx.os.arch)
 
     node_version = repository_ctx.attr.node_version
-
-    # Skip the download if we know it will fail
-    if not node_exists_for_os(node_version, host_os):
-        return
     node_repositories = repository_ctx.attr.node_repositories
 
     # We insert our default value here, not on the attribute's default, so it isn't documented.
@@ -170,7 +163,7 @@ def _download_node(repository_ctx):
     node_urls = repository_ctx.attr.node_urls
 
     # Download node & npm
-    version_host_os = "%s-%s" % (node_version, host_os)
+    version_host_os = "%s-%s" % (node_version, platform["id"])
     if not version_host_os in node_repositories:
         fail("Unknown NodeJS version-host %s" % version_host_os)
     filename, strip_prefix, sha256 = node_repositories[version_host_os]
@@ -643,7 +636,6 @@ def _prepare_node(repository_ctx):
     )
 
 def _nodejs_download_impl(repository_ctx):
-    assert_node_exists_for_host(repository_ctx)
     _download_node(repository_ctx)
     _download_yarn(repository_ctx)
     _prepare_node(repository_ctx)

@@ -26,7 +26,7 @@ def _impl(rctx):
         False,
     )
 
-node_toolchain_configure = repository_rule(
+nodejs_toolchain_configure = repository_rule(
     implementation = _impl,
     attrs = {
         "target_tool": attr.string(

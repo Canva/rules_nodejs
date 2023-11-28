@@ -35,4 +35,3 @@ The full current public API is accessible under `lib/`, excluding `lib/internal/
 - Use NodeJS v20 (dev dependency)
 - Add checks to `node.download(...)`
 - Restore the NodeJS versions data script, or remove it in favour of making it easier to manually manage (akin to `@aspect_bazel_lib//lib:write_source_files.bzl`)
-- Undo start of `yarn_install` refactor on this branch

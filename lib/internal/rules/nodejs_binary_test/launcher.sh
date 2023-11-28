@@ -83,7 +83,7 @@ TEMPLATED_env_vars
 # This redirects to stderr so it doesn't interfere with Bazel's worker protocol
 # find . -name thingImLookingFor 1>&2
 
-node="${RUNFILES}/TEMPLATED_vendored_node"
+node="${RUNFILES}/TEMPLATED_node"
 MAIN="${RUNFILES}/TEMPLATED_entry_point_manifest"
 
 # Export the location of the runfiles helpers script
@@ -147,10 +147,10 @@ for ARG in ${ALL_ARGS[@]+"${ALL_ARGS[@]}"}; do
     --node_options=*) USER_NODE_OPTIONS+=( "${ARG#--node_options=}" ) ;;
     # Legacy execroot references
     --bazel_use_legacy_execroot_paths__variant_rlocation_main) \
-        node=$(rlocation "TEMPLATED_vendored_node") \
+        node=$(rlocation "TEMPLATED_node") \
         MAIN=$(rlocation "TEMPLATED_entry_point_manifest") ;;
     --bazel_use_legacy_execroot_paths__variant_execroot_main) \
-        node=$(rlocation "TEMPLATED_vendored_node") \
+        node=$(rlocation "TEMPLATED_node") \
         MAIN="${PWD}/"TEMPLATED_entry_point_execroot_path ;;
     # Remaining argv is collected to pass to the program
     *) ARGS+=( "$ARG" )

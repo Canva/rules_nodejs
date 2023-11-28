@@ -95,15 +95,6 @@ _DOC = """
 
     If you don't use Yarn at all, you can skip downloading it by setting `yarn_urls = []`.
 
-    ### Using a local version
-
-    To avoid downloads, you can check in vendored copies of NodeJS and/or Yarn and set vendored_node and or vendored_yarn
-    to point to those before calling node_repositories. You can also point to a location where node is installed on your computer,
-    but we don't recommend this because it leads to version skew between you, your coworkers, and your Continuous Integration environment.
-    It also ties your build to a single platform, preventing you from cross-compiling into a Linux docker image on Mac for example.
-
-    See the [the repositories documentation](repositories.html) for how to use the resulting repositories.
-
     ### Manual install
 
     You can optionally pass a `package_json` array to node_repositories. This lets you use Bazel's version of yarn or npm, yet always run the package manager yourself.
@@ -145,12 +136,6 @@ def _download_node(repository_ctx):
     Args:
       repository_ctx: The repository rule context
     """
-    if repository_ctx.attr.vendored_node:
-        repository_ctx.file("node_info", content = "# vendored_node: {vendored_node}".format(
-            vendored_node = repository_ctx.attr.vendored_node,
-        ))
-        return
-
     platform = get_platform(repository_ctx.os.name, repository_ctx.os.arch)
 
     node_version = repository_ctx.attr.node_version
@@ -206,13 +191,6 @@ def _download_yarn(repository_ctx):
     # If there are no URLs to download yarn, skip the download
     if not len(yarn_urls):
         repository_ctx.file("yarn_info", content = "# no yarn urls")
-        return
-
-    # If yarn is vendored locally, we still need the info file but can skip downloading
-    if repository_ctx.attr.vendored_yarn:
-        repository_ctx.file("yarn_info", content = "# vendored_yarn: {vendored_yarn}".format(
-            vendored_yarn = repository_ctx.attr.vendored_yarn,
-        ))
         return
 
     yarn_version = repository_ctx.attr.yarn_version
@@ -273,37 +251,11 @@ def _prepare_node(repository_ctx):
     # TODO: Maybe we want to encode the OS as a specific attribute rather than do it based on naming?
     is_windows = "windows" == repository_ctx.attr.os
 
-    if repository_ctx.attr.vendored_node:
-        node_path = "/".join([f for f in [
-            "../../..",
-            repository_ctx.attr.vendored_node.workspace_root,
-            repository_ctx.attr.vendored_node.package,
-            repository_ctx.attr.vendored_node.name,
-        ] if f])
-        node_package = "@%s//%s:%s" % (
-            repository_ctx.attr.vendored_node.workspace_name,
-            repository_ctx.attr.vendored_node.package,
-            repository_ctx.attr.vendored_node.name,
-        )
-    else:
-        node_path = NODE_EXTRACT_DIR
-        node_package = NODE_EXTRACT_DIR
+    node_path = NODE_EXTRACT_DIR
+    node_package = NODE_EXTRACT_DIR
 
-    if repository_ctx.attr.vendored_yarn:
-        yarn_path = "/".join([f for f in [
-            "../../..",
-            repository_ctx.attr.vendored_yarn.workspace_root,
-            repository_ctx.attr.vendored_yarn.package,
-            repository_ctx.attr.vendored_yarn.name,
-        ] if f])
-        yarn_package = "@%s//%s:%s" % (
-            repository_ctx.attr.vendored_yarn.workspace_name,
-            repository_ctx.attr.vendored_yarn.package,
-            repository_ctx.attr.vendored_yarn.name,
-        )
-    else:
-        yarn_path = YARN_EXTRACT_DIR
-        yarn_package = YARN_EXTRACT_DIR
+    yarn_path = YARN_EXTRACT_DIR
+    yarn_package = YARN_EXTRACT_DIR
 
     node_bin = ("%s/bin/node" % node_path) if not is_windows else ("%s/node.exe" % node_path)
     node_bin_label = ("%s/bin/node" % node_package) if not is_windows else ("%s/node.exe" % node_package)
@@ -322,13 +274,6 @@ def _prepare_node(repository_ctx):
     yarn_bin_label = ("%s/bin/yarn.js" % yarn_package) if not is_windows else ("%s/bin/yarn.cmd" % yarn_package)
     yarn_script = "%s/bin/yarn.js" % yarn_path
 
-    # Ensure that the "vendored" binaries are resolved
-    # Just requesting their path from the repository context is enough to eager-load them
-    if repository_ctx.attr.vendored_node:
-        repository_ctx.path(Label(node_bin_label))
-    if repository_ctx.attr.vendored_yarn:
-        repository_ctx.path(Label(yarn_bin_label))
-
     entry_ext = ".cmd" if is_windows else ""
     node_entry = "bin/node%s" % entry_ext
     npm_entry = "bin/npm%s" % entry_ext
@@ -336,9 +281,9 @@ def _prepare_node(repository_ctx):
     npm_node_repositories_entry = "bin/npm_node_repositories%s" % entry_ext
     yarn_node_repositories_entry = "bin/yarn_node_repositories%s" % entry_ext
 
-    node_bin_relative = node_bin if repository_ctx.attr.vendored_node else paths.relativize(node_bin, "bin")
-    npm_script_relative = npm_script if repository_ctx.attr.vendored_node else paths.relativize(npm_script, "bin")
-    yarn_script_relative = yarn_script if repository_ctx.attr.vendored_yarn else paths.relativize(yarn_script, "bin")
+    node_bin_relative = paths.relativize(node_bin, "bin")
+    npm_script_relative = paths.relativize(npm_script, "bin")
+    yarn_script_relative = paths.relativize(yarn_script, "bin")
 
     if repository_ctx.attr.preserve_symlinks:
         node_args = "--preserve-symlinks"
@@ -617,12 +562,12 @@ def _prepare_node(repository_ctx):
                 srcs = {npm_files_glob}[":node_files"],
             )
         """).format(
-            node_bin_export = "" if repository_ctx.attr.vendored_node else ("\n  \"%s\"," % node_bin),
-            npm_bin_export = "" if repository_ctx.attr.vendored_node else ("\n  \"%s\"," % npm_bin),
-            npx_bin_export = "" if repository_ctx.attr.vendored_node else ("\n  \"%s\"," % npx_bin),
-            npm_files_glob = "" if repository_ctx.attr.vendored_node else "glob([\"bin/nodejs/**\"]) + ",
-            yarn_bin_export = "" if repository_ctx.attr.vendored_yarn else ("\n  \"%s\"," % yarn_bin),
-            yarn_files_glob = "" if repository_ctx.attr.vendored_yarn else "glob([\"bin/yarnpkg/**\"]) + ",
+            node_bin_export = ("\n  \"%s\"," % node_bin),
+            npm_bin_export = ("\n  \"%s\"," % npm_bin),
+            npx_bin_export = ("\n  \"%s\"," % npx_bin),
+            npm_files_glob = "glob([\"bin/nodejs/**\"]) + ",
+            yarn_bin_export = ("\n  \"%s\"," % yarn_bin),
+            yarn_files_glob = "glob([\"bin/yarnpkg/**\"]) + ",
             node_bin_label = node_bin_label,
             npm_bin_label = npm_bin_label,
             npx_bin_label = npx_bin_label,

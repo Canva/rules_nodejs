@@ -289,7 +289,7 @@ def _nodejs_binary_impl(ctx):
         "TEMPLATED_node_patches_script": _to_manifest_path(ctx, ctx.file._node_patches_script),
         "TEMPLATED_require_patch_script": _to_manifest_path(ctx, ctx.outputs.require_patch_script),
         "TEMPLATED_runfiles_helper_script": _to_manifest_path(ctx, ctx.file._runfile_helpers_main),
-        "TEMPLATED_vendored_node": _to_manifest_path(ctx, node_toolchain.nodeinfo.target_tool[DefaultInfo].files.to_list()[0]),
+        "TEMPLATED_node": _to_manifest_path(ctx, node_toolchain.nodeinfo.target_tool[DefaultInfo].files.to_list()[0]),
     }
 
     substitutions["TEMPLATED_entry_point_manifest"] = _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))

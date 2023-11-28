@@ -13,6 +13,7 @@ local_path_override(
 
 nodejs = use_extension("@build_bazel_rules_nodejs//lib:extensions.bzl", "nodejs")
 nodejs.download(
+    name = "nodejs",
     node_version = "20.8.0",
     yarn_version = "1.22.10",
 )

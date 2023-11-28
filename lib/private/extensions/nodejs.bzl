@@ -2,6 +2,7 @@
 `nodejs` module extension implementation.
 """
 
+load("//lib/private:repositories/nodejs_download/attrs.bzl", NODEJS_DOWNLOAD_COMMON_ATTRS = "COMMON_ATTRS")
 load("//lib/private:repositories.bzl", "nodejs_download", "nodejs_toolchain_configure", "nodejs_toolchains")
 load("//lib/private:utils/platform.bzl", "PLATFORMS")
 
@@ -16,26 +17,42 @@ def _nodejs_impl(mctx):
                 # TODO Confirm records exist for OS
                 # TODO Remove package manager bits, only needed by `yarn_install` host instance
                 nodejs_download(
-                    name = "nodejs_%s" % platform["id"],
+                    name = "%s_%s" % (attrs.name, platform["id"]),
                     node_version = attrs.node_version,
                     yarn_version = attrs.yarn_version,
+                    node_download_auth = attrs.node_download_auth,
+                    node_repositories = attrs.node_repositories,
+                    node_urls = attrs.node_urls,
+                    package_json = attrs.package_json,
+                    preserve_symlinks = attrs.preserve_symlinks,
+                    yarn_download_auth = attrs.yarn_download_auth,
+                    yarn_repositories = attrs.yarn_repositories,
+                    yarn_urls = attrs.yarn_urls,
                     os = platform["os"],
                     arch = platform["arch"],
                 )
                 nodejs_toolchain_configure(
-                    name = "nodejs_%s_config" % platform["id"],
-                    target_tool = "@nodejs_%s//:node_bin" % platform["id"],
+                    name = "%s_%s_config" % (attrs.name, platform["id"]),
+                    target_tool = "@%s_%s//:node_bin" % (attrs.name, platform["id"]),
                 )
             # Toolchain registrations without triggering eager downloading
             # TODO Rename this to something more appropriate
             nodejs_toolchains(
-                name = "nodejs",
+                name = attrs.name,
                 node_version = attrs.node_version,
             )
             nodejs_download(
-                name = "nodejs_host",
+                name = "%s_host" % attrs.name,
                 node_version = attrs.node_version,
                 yarn_version = attrs.yarn_version,
+                node_download_auth = attrs.node_download_auth,
+                node_repositories = attrs.node_repositories,
+                node_urls = attrs.node_urls,
+                package_json = attrs.package_json,
+                preserve_symlinks = attrs.preserve_symlinks,
+                yarn_download_auth = attrs.yarn_download_auth,
+                yarn_repositories = attrs.yarn_repositories,
+                yarn_urls = attrs.yarn_urls,
                 os = mctx.os.name,
                 arch = mctx.os.arch,
             )
@@ -51,14 +68,11 @@ nodejs = module_extension(
     implementation = _nodejs_impl,
     tag_classes = {
         "download": tag_class(
-            attrs = {
-                "node_version": attr.string(
+            attrs = dict(NODEJS_DOWNLOAD_COMMON_ATTRS, **{
+                "name": attr.string(
                     mandatory = True,
                 ),
-                "yarn_version": attr.string(
-                    mandatory = True,
-                ),
-            },
+            }),
             doc = "",
         ),
     },

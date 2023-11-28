@@ -4,7 +4,7 @@ Attributes for `nodejs_download` repository rule.
 
 visibility(["//lib/private"])
 
-ATTRS = {
+COMMON_ATTRS = {
     "node_download_auth": attr.string_dict(
         default = {},
         doc = """
@@ -37,8 +37,9 @@ ATTRS = {
     ),
     "node_version": attr.string(
         mandatory = True,
-        doc = "The specific version of NodeJS to install or, if vendored_node is specified, the vendored version of node",
+        doc = "The specific version of NodeJS to install.",
     ),
+    # TODO Remove this
     "package_json": attr.label_list(
         doc = """
             (ADVANCED, not recommended)
@@ -59,18 +60,6 @@ ATTRS = {
             all required files need to be included in your node_modules filegroup. This option is desirable as it gives
             a stronger guarantee of hermeticity which is required for remote execution.
         """,
-    ),
-    "vendored_node": attr.label(
-        allow_single_file = True,
-        doc = """
-            The local path to a pre-installed NodeJS runtime.
-
-            If set then also set node_version to the version that of node that is vendored.
-        """,
-    ),
-    "vendored_yarn": attr.label(
-        allow_single_file = True,
-        doc = "The local path to a pre-installed yarn tool",
     ),
     "yarn_download_auth": attr.string_dict(
         default = {},
@@ -104,10 +93,13 @@ ATTRS = {
         doc = "The specific version of Yarn to install",
         mandatory = True,
     ),
+}
+
+ATTRS = dict(COMMON_ATTRS, **{
     "os": attr.string(
         mandatory = True,
     ),
     "arch": attr.string(
         mandatory = True,
     ),
-}
+})

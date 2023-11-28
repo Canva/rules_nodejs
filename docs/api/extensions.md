@@ -58,7 +58,8 @@ node_modules.yarn(<a href="#node_modules.yarn-name">name</a>, <a href="#node_mod
 
 <pre>
 nodejs = use_extension("@build_bazel_rules_nodejs//lib:extensions.bzl", "nodejs")
-nodejs.download(<a href="#nodejs.download-node_version">node_version</a>, <a href="#nodejs.download-yarn_version">yarn_version</a>)
+nodejs.download(<a href="#nodejs.download-name">name</a>, <a href="#nodejs.download-node_download_auth">node_download_auth</a>, <a href="#nodejs.download-node_repositories">node_repositories</a>, <a href="#nodejs.download-node_urls">node_urls</a>, <a href="#nodejs.download-node_version">node_version</a>, <a href="#nodejs.download-package_json">package_json</a>,
+                <a href="#nodejs.download-preserve_symlinks">preserve_symlinks</a>, <a href="#nodejs.download-yarn_download_auth">yarn_download_auth</a>, <a href="#nodejs.download-yarn_repositories">yarn_repositories</a>, <a href="#nodejs.download-yarn_urls">yarn_urls</a>, <a href="#nodejs.download-yarn_version">yarn_version</a>)
 </pre>
 
 
@@ -72,7 +73,16 @@ nodejs.download(<a href="#nodejs.download-node_version">node_version</a>, <a hre
 
 | Name  | Description | Type | Mandatory | Default |
 | :------------- | :------------- | :------------- | :------------- | :------------- |
-| <a id="nodejs.download-node_version"></a>node_version |  -   | String | required |  |
-| <a id="nodejs.download-yarn_version"></a>yarn_version |  -   | String | required |  |
+| <a id="nodejs.download-name"></a>name |  -   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="nodejs.download-node_download_auth"></a>node_download_auth |  Auth to use for all url requests Example: `{"type": "basic", "login": "<UserName>", "password": "<Password>" }`   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional |  `{}`  |
+| <a id="nodejs.download-node_repositories"></a>node_repositories |  Custom list of node repositories to use<br><br>A dictionary mapping NodeJS versions to sets of hosts and their corresponding (filename, strip_prefix, sha256) tuples. You should list a node binary for every platform users have, likely Mac, Windows, and Linux.<br><br>By default, if this attribute has no items, we'll use a list of all public NodeJS releases.   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> List of strings</a> | optional |  `{}`  |
+| <a id="nodejs.download-node_urls"></a>node_urls |  Custom list of URLs to use to download NodeJS<br><br>Each entry is a template for downloading a node distribution.<br><br>The `{version}` parameter is substituted with the `node_version` attribute, and `{filename}` with the matching entry from the `node_repositories` attribute.   | List of strings | optional |  `["https://nodejs.org/dist/v{version}/{filename}"]`  |
+| <a id="nodejs.download-node_version"></a>node_version |  The specific version of NodeJS to install.   | String | required |  |
+| <a id="nodejs.download-package_json"></a>package_json |  (ADVANCED, not recommended) A list of labels, which indicate the package.json files that will be installed when you manually run the package manager, e.g. with `bazel run @nodejs//:yarn_node_repositories` or `bazel run @nodejs//:npm_node_repositories install`. If you use bazel-managed dependencies, you should omit this attribute.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="nodejs.download-preserve_symlinks"></a>preserve_symlinks |  Turn on --node_options=--preserve-symlinks for nodejs_binary and nodejs_test rules.<br><br>When this option is turned on, node will preserve the symlinked path for resolves instead of the default behavior of resolving to the real path. This means that all required files must be in be included in your runfiles as it prevents the default behavior of potentially resolving outside of the runfiles. For example, all required files need to be included in your node_modules filegroup. This option is desirable as it gives a stronger guarantee of hermeticity which is required for remote execution.   | Boolean | optional |  `True`  |
+| <a id="nodejs.download-yarn_download_auth"></a>yarn_download_auth |  Auth to use for all url requests Example: `{"type": "basic", "login": "<UserName>", "password": "<Password>" }`   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> String</a> | optional |  `{}`  |
+| <a id="nodejs.download-yarn_repositories"></a>yarn_repositories |  Custom list of yarn repositories to use.<br><br>Dictionary mapping Yarn versions to their corresponding (filename, strip_prefix, sha256) tuples.<br><br>By default, if this attribute has no items, we'll use a list of all public NodeJS releases.   | <a href="https://bazel.build/rules/lib/dict">Dictionary: String -> List of strings</a> | optional |  `{}`  |
+| <a id="nodejs.download-yarn_urls"></a>yarn_urls |  Custom list of URLs to use to download Yarn<br><br>Each entry is a template, similar to the `node_urls` attribute, using `yarn_version` and `yarn_repositories` in the substitutions.<br><br>If this list is empty, we won't download yarn at all.   | List of strings | optional |  `["https://github.com/yarnpkg/yarn/releases/download/v{version}/{filename}"]`  |
+| <a id="nodejs.download-yarn_version"></a>yarn_version |  The specific version of Yarn to install   | String | required |  |
 
 

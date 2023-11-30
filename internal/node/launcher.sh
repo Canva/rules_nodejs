@@ -222,10 +222,14 @@ for ARG in ${ALL_ARGS[@]+"${ALL_ARGS[@]}"}; do
     # Resolves to file under Bazel's execroot directory
     --bazel_use_legacy_execroot_paths__variant_execroot_main) \
         MAIN="${PWD}/"TEMPLATED_entry_point_execroot_path ;;
+    --bazel_arg_runfiles_prefix=*) \
+        ARGS+=( "${RUNFILES}/${ARG#--bazel_arg_runfiles_prefix=}" ) ;;
     # Remaining argv is collected to pass to the program
     *) ARGS+=( "$ARG" )
   esac
 done
+
+echo "args" "${ARGS[@]}"
 
 # Link the first-party modules into node_modules directory before running the actual program
 if [ "$RUN_LINKER" = true ]; then

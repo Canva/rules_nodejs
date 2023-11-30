@@ -13,8 +13,9 @@
 # limitations under the License.
 
 load("@build_bazel_rules_nodejs//:index.bzl", "nodejs_test")
-load("@npm_node_patches//typescript:index.bzl", "tsc")
+#load("@npm_node_patches//typescript:index.bzl", "tsc")
 load("//packages/rollup:index.bzl", "rollup_bundle")
+load("//packages/typescript:index.bzl", "ts_project")
 
 package(default_visibility = ["//:__subpackages__"])
 
@@ -35,20 +36,32 @@ tests = glob(
 
 test_js = [t.replace(".ts", ".js") for t in tests]
 
-tsc(
+# tsc(
+#     name = "compile",
+#     # TODO: we ought to compile tests separately?
+#     outs = js + test_js,
+#     args = [
+#         "-p",
+#         "$(execpath tsconfig-bazel.json)",
+#         "--outDir",
+#         "$(RULEDIR)",
+#     ],
+#     data = sources + tests + [
+#         "tsconfig.json",
+#         "tsconfig-bazel.json",
+#         "@npm_node_patches//:node_modules",
+#     ],
+# )
+
+ts_project(
     name = "compile",
-    # TODO: we ought to compile tests separately?
-    outs = js + test_js,
-    args = [
-        "-p",
-        "$(execpath tsconfig-bazel.json)",
-        "--outDir",
-        "$(RULEDIR)",
-    ],
-    data = sources + tests + [
-        "tsconfig.json",
-        "tsconfig-bazel.json",
-        "@npm_node_patches//:node_modules",
+    srcs = sources + tests,
+    declaration = False,
+    tsconfig = "tsconfig-bazel.json",
+    extends = "tsconfig.json",
+    tsc = "@npm_node_patches//typescript/bin:tsc",
+    deps = [
+        "@npm_node_patches//@types/node",
     ],
 )
 

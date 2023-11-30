@@ -120,7 +120,9 @@ def _write_loader_script(ctx):
     substitutions = {}
     substitutions["TEMPLATED_entry_point_path"] = _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))
     if DirectoryFilePathInfo in ctx.attr.entry_point:
-        fail("Using a directory as an entrypoint is not supported")
+        substitutions["TEMPLATED_entry_point_main"] = ctx.attr.entry_point[DirectoryFilePathInfo].path
+    else:
+        substitutions["TEMPLATED_entry_point_main"] = ""
 
     ctx.actions.expand_template(
         template = ctx.file._loader_template,
@@ -242,7 +244,7 @@ fi
     #
     # Rules such as nodejs_image should use only ctx.toolchains["@build_bazel_rules_nodejs//toolchains/node:toolchain_type"].nodeinfo
     # when building the image as that will reflect the selected --platform.
-    node_tool_files = []
+    node_tool_files = ctx.files._node[:]
     node_tool_files.extend(ctx.toolchains["@build_bazel_rules_nodejs//toolchains/node:toolchain_type"].nodeinfo.tool_files)
 
     node_tool_files.append(ctx.file._link_modules_script)
@@ -259,6 +261,7 @@ fi
     runfiles.extend(ctx.files._bash_runfile_helper)
     runfiles.append(ctx.outputs.loader_script)
     runfiles.append(ctx.outputs.require_patch_script)
+    runfiles.append(ctx.file._repository_args)
 
     # First replace any instances of "$(rlocation " with "$$(rlocation " to preserve
     # legacy uses of "$(rlocation"
@@ -307,15 +310,24 @@ fi
         "TEMPLATED_loader_script": _to_manifest_path(ctx, ctx.outputs.loader_script),
         "TEMPLATED_modules_manifest": _to_manifest_path(ctx, node_modules_manifest),
         "TEMPLATED_node_patches_script": _to_manifest_path(ctx, ctx.file._node_patches_script),
+        "TEMPLATED_repository_args": _to_manifest_path(ctx, ctx.file._repository_args),
         "TEMPLATED_require_patch_script": _to_manifest_path(ctx, ctx.outputs.require_patch_script),
         "TEMPLATED_runfiles_helper_script": _to_manifest_path(ctx, ctx.file._runfile_helpers_main),
-        "TEMPLATED_vendored_node": ctx.toolchains["@build_bazel_rules_nodejs//toolchains/node:toolchain_type"].nodeinfo.target_tool_path,
+        "TEMPLATED_vendored_node": "" if is_builtin else strip_external(ctx.file._node.path),
     }
 
-    substitutions["TEMPLATED_entry_point_manifest"] = _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))
+    # TODO when we have "link_all_bins" we will only need to look in one place for the entry point
+    #if ctx.file.entry_point.is_source:
+    #    substitutions["TEMPLATED_script_path"] = "\"%s\"" % _to_execroot_path(ctx, ctx.file.entry_point)
+    #else:
+    #    substitutions["TEMPLATED_script_path"] = "$(rlocation \"%s\")" % _to_manifest_path(ctx, ctx.file.entry_point)
+    # For now we need to look in both places
     substitutions["TEMPLATED_entry_point_execroot_path"] = "\"%s\"" % _ts_to_js(_to_execroot_path(ctx, _get_entry_point_file(ctx)))
+    substitutions["TEMPLATED_entry_point_manifest_path"] = "$(rlocation \"%s\")" % _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))
     if DirectoryFilePathInfo in ctx.attr.entry_point:
-        fail("Using a directory as an entrypoint is not supported")
+        substitutions["TEMPLATED_entry_point_main"] = ctx.attr.entry_point[DirectoryFilePathInfo].path
+    else:
+        substitutions["TEMPLATED_entry_point_main"] = ""
 
     ctx.actions.expand_template(
         template = ctx.file._launcher_template,
@@ -581,6 +593,10 @@ Predefined genrule variables are not supported in this context.
     ),
     "_node_patches_script": attr.label(
         default = Label("//internal/node:node_patches.js"),
+        allow_single_file = True,
+    ),
+    "_repository_args": attr.label(
+        default = Label("@nodejs//:bin/node_repo_args.sh"),
         allow_single_file = True,
     ),
     "_require_patch_template": attr.label(

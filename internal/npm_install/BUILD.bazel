@@ -1,22 +1,9 @@
-load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+# bazel_skylib mocked out
+# load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@build_bazel_rules_nodejs//:index.bzl", bzl_library = "dummy_bzl_library")
 load("@build_bazel_rules_nodejs//:index.bzl", "nodejs_binary")
 
-# BEGIN-INTERNAL
-# avoid leaking a ts dependency
-load("//packages/typescript:checked_in_ts_project.bzl", "checked_in_ts_project")
 
-# Using checked in ts library like the linker
-# To update index.js run:
-#   bazel run //internal/npm_install:compile_generate_build_file_check_compiled.update
-checked_in_ts_project(
-    name = "compile_generate_build_file",
-    src = "generate_build_file.ts",
-    checked_in_js = "index.js",
-    visibility = ["//internal/npm_install:__subpackages__"],
-    deps = ["@npm//@types/node"],
-)
-
-# END-INTERNAL
 
 bzl_library(
     name = "bzl",

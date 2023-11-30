@@ -310,17 +310,6 @@ data attribute.
     ),
 })
 
-PROXY_ENVVARS = [
-    "all_proxy",
-    "ALL_PROXY",
-    "http_proxy",
-    "HTTP_PROXY",
-    "https_proxy",
-    "HTTPS_PROXY",
-    "no_proxy",
-    "NO_PROXY",
-]
-
 def _apply_pre_install_patches(repository_ctx):
     if len(repository_ctx.attr.pre_install_patches) == 0:
         return
@@ -480,45 +469,37 @@ def _rerooted_workspace_path(repository_ctx, f):
 def _rerooted_workspace_package_json_dir(repository_ctx):
     return str(repository_ctx.path(_rerooted_workspace_path(repository_ctx, repository_ctx.attr.package_json)).dirname)
 
-def _is_executable(repository_ctx, path):
-    stat_exe = repository_ctx.which("stat")
-    if stat_exe == None:
-        return False
-
-    # A hack to detect if stat is BSD stat as BSD stat does not support --version flag
-    is_bsd_stat = repository_ctx.execute([stat_exe, "--version"]).return_code != 0
-    if is_bsd_stat:
-        stat_args = ["-f", "%Lp", path]
-    else:
-        stat_args = ["-c", "%a", path]
-
-    arguments = [stat_exe] + stat_args
-    exec_result = repository_ctx.execute(arguments)
-    stdout = exec_result.stdout.strip()
-    mode = int(stdout, 8)
-    return mode & 0o100 != 0
-
 def _copy_file(repository_ctx, f):
-    src_path = repository_ctx.path(f)
-    dest_path = _rerooted_workspace_path(repository_ctx, f)
-    executable = _is_executable(repository_ctx, src_path)
+    to = _rerooted_workspace_path(repository_ctx, f)
 
-    # Copy the file
-    repository_ctx.file(
-        dest_path,
-        repository_ctx.read(src_path),
-        executable = executable,
-        legacy_utf8 = False,
+    # ensure the destination directory exists
+    to_segments = to.split("/")
+    if len(to_segments) > 1:
+        dirname = "/".join(to_segments[:-1])
+        args = ["mkdir", "-p", dirname] if not is_windows_os(repository_ctx) else ["cmd", "/c", "if not exist {dir} (mkdir {dir})".format(dir = dirname.replace("/", "\\"))]
+        result = repository_ctx.execute(
+            args,
+            quiet = repository_ctx.attr.quiet,
+        )
+        if result.return_code:
+            fail("mkdir -p %s failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (dirname, result.stdout, result.stderr))
+
+    # copy the file; don't use the repository_ctx.template trick with empty substitution as this
+    # does not copy over binary files properly
+    cp_args = ["cp", "-f", repository_ctx.path(f), to] if not is_windows_os(repository_ctx) else ["xcopy", "/Y", str(repository_ctx.path(f)).replace("/", "\\"), "\\".join(to_segments) + "*"]
+    result = repository_ctx.execute(
+        cp_args,
+        quiet = repository_ctx.attr.quiet,
     )
+    if result.return_code:
+        fail("cp -f {} {} failed: \nSTDOUT:\n{}\nSTDERR:\n{}".format(repository_ctx.path(f), to, result.stdout, result.stderr))
 
 def _symlink_file(repository_ctx, f):
     repository_ctx.symlink(f, _rerooted_workspace_path(repository_ctx, f))
 
 def _copy_data_dependencies(repository_ctx):
     """Add data dependencies to the repository."""
-    total = len(repository_ctx.attr.data)
-    for i, f in enumerate(repository_ctx.attr.data):
-        repository_ctx.report_progress("Copying data dependencies (%s/%s)" % (i, total))
+    for f in repository_ctx.attr.data:
         # Make copies of the data files instead of symlinking
         # as yarn under linux will have trouble using symlinked
         # files as npm file:// packages
@@ -566,28 +547,14 @@ def _check_min_bazel_version(rule, repository_ctx):
             minimum_bazel_version = "0.26.0",
         )
 
-def _propagate_http_proxy_env(repository_ctx, env):
-    """Propagate proxy environment variables if available to repository rule."""
-    os_env = repository_ctx.os.environ
-
-    proxy_env = {k: v for k, v in os_env.items() if k in PROXY_ENVVARS}
-    return dict(env.items() + proxy_env.items())
-
 def _npm_install_impl(repository_ctx):
     """Core implementation of npm_install."""
 
-    # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
-    repository_ctx.path(repository_ctx.attr.package_json)
-    repository_ctx.path(repository_ctx.attr.yarn_lock)
-    for f in repository_ctx.attr.data:
-        repository_ctx.path(f)
+    _check_min_bazel_version("npm_install", repository_ctx)
+
+    is_windows_host = is_windows_os(repository_ctx)
     node = repository_ctx.path(get_node_label(repository_ctx))
     npm = get_npm_label(repository_ctx)
-    repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
-    repository_ctx.path(Label("//internal/npm_install:index.js"))
-
-    _check_min_bazel_version("npm_install", repository_ctx)
-    is_windows_host = is_windows_os(repository_ctx)
 
     # Set the base command (install or ci)
     npm_args = [repository_ctx.attr.npm_command]
@@ -649,8 +616,6 @@ cd /D "{root}" && "{npm}" {npm_args}
         env[env_key] = "1"
     env["BUILD_BAZEL_RULES_NODEJS_VERSION"] = VERSION
 
-    env = _propagate_http_proxy_env(repository_ctx, env)
-
     # NB: after running npm install, it's essential that we don't cause the repository rule to restart
     # This means we must not reference any additional labels after this point.
     # See https://github.com/bazelbuild/rules_nodejs/issues/2620
@@ -711,7 +676,6 @@ See npm CLI docs https://docs.npmjs.com/cli/install.html for complete list of su
         ),
         "_remove_npm_absolute_paths": attr.label(default = Label("//third_party/github.com/juanjoDiaz/removeNPMAbsolutePaths:bin/removeNPMAbsolutePaths")),
     }),
-    environ = PROXY_ENVVARS,
     doc = """Runs npm install during workspace setup.
 
 This rule will set the environment variable `BAZEL_NPM_INSTALL` to '1' (unless it
@@ -723,23 +687,13 @@ check if yarn is being run by the `npm_install` repository rule.""",
 def _yarn_install_impl(repository_ctx):
     """Core implementation of yarn_install."""
 
-    # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
-    repository_ctx.path(repository_ctx.attr.package_json)
-    repository_ctx.path(repository_ctx.attr.yarn_lock)
-    for f in repository_ctx.attr.data:
-        repository_ctx.path(f)
+    _check_min_bazel_version("yarn_install", repository_ctx)
+
+    is_windows_host = is_windows_os(repository_ctx)
     node = repository_ctx.path(get_node_label(repository_ctx))
     yarn = get_yarn_label(repository_ctx)
-    repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
-    repository_ctx.path(Label("//internal/npm_install:index.js"))
-
-    _check_min_bazel_version("yarn_install", repository_ctx)
-    is_windows_host = is_windows_os(repository_ctx)
 
     yarn_args = []
-
-    if repository_ctx.attr.ignore_platform:
-        yarn_args.append("--ignore-platform")
 
     # Set frozen lockfile as default install to install the exact version from the yarn.lock
     # file. To perform an yarn install use the vendord yarn binary with:
@@ -768,13 +722,17 @@ def _yarn_install_impl(repository_ctx):
     # The entry points for npm install for osx/linux and windows
     if not is_windows_host:
         # Prefix filenames with _ so they don't conflict with the npm packages.
-        # Set YARN_IGNORE_PATH=1 so it doesn't go through wrappers set by `yarn-path` https://classic.yarnpkg.com/lang/en/docs/yarnrc/#toc-yarn-path
+        # Unset YARN_IGNORE_PATH before calling yarn incase it is set so that
+        # .yarnrc yarn-path is followed if set. This is for the case when calling
+        # bazel from yarn with `yarn bazel ...` and yarn follows yarn-path in
+        # .yarnrc it will set YARN_IGNORE_PATH=1 which will prevent the bazel
+        # call into yarn from also following the yarn-path as desired.
         repository_ctx.file(
             "_yarn.sh",
             content = """#!/usr/bin/env bash
 # Immediately exit if any command fails.
 set -e
-export YARN_IGNORE_PATH=1
+unset YARN_IGNORE_PATH
 (cd "{root}"; "{yarn}" {yarn_args})
 """.format(
                 root = root,
@@ -787,7 +745,7 @@ export YARN_IGNORE_PATH=1
         repository_ctx.file(
             "_yarn.cmd",
             content = """@echo off
-set "YARN_IGNORE_PATH=1"
+set "YARN_IGNORE_PATH="
 cd /D "{root}" && "{yarn}" {yarn_args}
 """.format(
                 root = root,
@@ -817,8 +775,6 @@ cd /D "{root}" && "{yarn}" {yarn_args}
         env[env_key] = "1"
     env["BUILD_BAZEL_RULES_NODEJS_VERSION"] = VERSION
 
-    env = _propagate_http_proxy_env(repository_ctx, env)
-
     repository_ctx.report_progress("Running yarn install on %s" % repository_ctx.attr.package_json)
     result = repository_ctx.execute(
         [repository_ctx.path("_yarn.cmd" if is_windows_host else "_yarn.sh")],
@@ -831,36 +787,6 @@ cd /D "{root}" && "{yarn}" {yarn_args}
 
     _symlink_node_modules(repository_ctx)
     _apply_post_install_patches(repository_ctx)
-
-    repository_ctx.report_progress("Removing non-deterministic *.pyc files")
-    result = repository_ctx.execute([
-        "find",
-        repository_ctx.path("node_modules"),
-        "-type",
-        "f",
-        "-name",
-        "*.pyc",
-        "-delete",
-    ])
-    if result.return_code:
-        fail("deleting .pyc files failed: %s (%s)" % (result.stdout, result.stderr))
-
-    repository_ctx.report_progress("Stripping non-deterministic debug symbols from *.node files")
-    result = repository_ctx.execute([
-        "find",
-        repository_ctx.path("node_modules"),
-        "-type",
-        "f",
-        "-name",
-        "*.node",
-        "-exec",
-        "strip",
-        "-S",
-        "{}",
-        ";",
-    ])
-    if result.return_code:
-        fail("stripping .node files failed: %s (%s)" % (result.stdout, result.stderr))
 
     _create_build_files(repository_ctx, "yarn_install", node, repository_ctx.attr.yarn_lock, repository_ctx.attr.generate_local_modules_build_files)
 
@@ -908,12 +834,7 @@ to yarn so that the local cache is contained within the external repository.
             mandatory = True,
             allow_single_file = True,
         ),
-        "ignore_platform": attr.bool(
-            default = False,
-            doc = "Use the --ignore-platform flag for yarn install. Skips platform checks when installing packages.",
-        ),
     }),
-    environ = PROXY_ENVVARS,
     doc = """Runs yarn install during workspace setup.
 
 This rule will set the environment variable `BAZEL_YARN_INSTALL` to '1' (unless it

@@ -68,7 +68,7 @@ COMMON_REPLACEMENTS = {
     # Make sure we don't try to load from under tools/ which isn't in the distro
     "(load\\(\"//:tools/defaults.bzl\", .*\\))": "# defaults.bzl not included in distribution\n# $1",
     # Cleanup up package.json @bazel/foobar package deps for published packages:
-    # "@bazel/foobar": "file:///..." => "@bazel/foobar": "0.0.0-PLACEHOLDER"
+    # "@bazel/foobar": "0.0.0-PLACEHOLDER" => "@bazel/foobar": "0.0.0-PLACEHOLDER"
     "\"@bazel/([a-zA-Z_-]+)\":\\s+\"(file|bazel)[^\"]+\"": "\"@bazel/$1\": \"0.0.0-PLACEHOLDER\"",
 }
 
@@ -86,7 +86,7 @@ def yarn_install(**kwargs):
 # against.
 # This version should be updated together with the version of the Bazel
 # in .bazelversion. This is asserted in //internal:bazel_version_test.
-BAZEL_VERSION = "5.4.0"
+BAZEL_VERSION = "4.1.0"
 
 # Versions of Bazel which users should be able to use.
 # Ensures we don't break backwards-compatibility,

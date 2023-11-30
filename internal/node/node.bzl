@@ -120,9 +120,7 @@ def _write_loader_script(ctx):
     substitutions = {}
     substitutions["TEMPLATED_entry_point_path"] = _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))
     if DirectoryFilePathInfo in ctx.attr.entry_point:
-        substitutions["TEMPLATED_entry_point_main"] = ctx.attr.entry_point[DirectoryFilePathInfo].path
-    else:
-        substitutions["TEMPLATED_entry_point_main"] = ""
+        fail("Not supported")
 
     ctx.actions.expand_template(
         template = ctx.file._loader_template,
@@ -317,18 +315,11 @@ fi
         "TEMPLATED_vendored_node": "" if is_builtin else strip_external(ctx.file._node.path),
     }
 
-    # TODO when we have "link_all_bins" we will only need to look in one place for the entry point
-    #if ctx.file.entry_point.is_source:
-    #    substitutions["TEMPLATED_script_path"] = "\"%s\"" % _to_execroot_path(ctx, ctx.file.entry_point)
-    #else:
-    #    substitutions["TEMPLATED_script_path"] = "$(rlocation \"%s\")" % _to_manifest_path(ctx, ctx.file.entry_point)
-    # For now we need to look in both places
+    substitutions["TEMPLATED_entry_point_manifest"] = _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))
+    # Needed for tests using legacy implementation
     substitutions["TEMPLATED_entry_point_execroot_path"] = "\"%s\"" % _ts_to_js(_to_execroot_path(ctx, _get_entry_point_file(ctx)))
-    substitutions["TEMPLATED_entry_point_manifest_path"] = "$(rlocation \"%s\")" % _ts_to_js(_to_manifest_path(ctx, _get_entry_point_file(ctx)))
     if DirectoryFilePathInfo in ctx.attr.entry_point:
-        substitutions["TEMPLATED_entry_point_main"] = ctx.attr.entry_point[DirectoryFilePathInfo].path
-    else:
-        substitutions["TEMPLATED_entry_point_main"] = ""
+        fail("Not supported")
 
     ctx.actions.expand_template(
         template = ctx.file._launcher_template,

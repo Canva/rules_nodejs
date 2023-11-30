@@ -171,10 +171,10 @@ if [[ "${BAZEL_NODE_PATCH_REQUIRE}" != /* ]] && [[ ! "${BAZEL_NODE_PATCH_REQUIRE
   export BAZEL_NODE_PATCH_REQUIRE=$(pwd)/${BAZEL_NODE_PATCH_REQUIRE}
 fi
 
-readonly repository_args=$(rlocation "TEMPLATED_repository_args")
+#readonly repository_args=$(rlocation "TEMPLATED_repository_args")
 readonly lcov_merger_script=$(rlocation "TEMPLATED_lcov_merger_script")
 
-source $repository_args
+export NODE_REPOSITORY_ARGS="--preserve-symlinks"
 
 ARGS=()
 LAUNCHER_NODE_OPTIONS=($NODE_REPOSITORY_ARGS)

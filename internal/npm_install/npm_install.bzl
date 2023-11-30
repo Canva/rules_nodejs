@@ -743,7 +743,7 @@ def _yarn_install_impl(repository_ctx):
 
     is_windows_host = is_windows_os(repository_ctx)
 
-    yarn_args = []
+    yarn_args = ["--ignore-platform"]
 
     # Set frozen lockfile as default install to install the exact version from the yarn.lock
     # file. To perform an yarn install use the vendord yarn binary with:

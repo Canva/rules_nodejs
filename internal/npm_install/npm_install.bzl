@@ -584,8 +584,8 @@ def _npm_install_impl(repository_ctx):
     repository_ctx.path(repository_ctx.attr.yarn_lock)
     for f in repository_ctx.attr.data:
         repository_ctx.path(f)
-     node = repository_ctx.path(get_node_label(repository_ctx))
-     npm = get_npm_label(repository_ctx)
+    node = repository_ctx.path(get_node_label(repository_ctx))
+    npm = get_npm_label(repository_ctx)
     repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
     repository_ctx.path(Label("//internal/npm_install:index.js"))
     repository_ctx.path(Label("@nodejs_%s//:node_info" % os_name(repository_ctx)))

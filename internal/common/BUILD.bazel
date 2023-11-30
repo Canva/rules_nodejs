@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+# bazel_skylib mocked out
+# load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@build_bazel_rules_nodejs//:index.bzl", bzl_library = "dummy_bzl_library")
 load(":check_version_test.bzl", "check_version_test_suite")
 
 licenses(["notice"])  # Apache 2.0

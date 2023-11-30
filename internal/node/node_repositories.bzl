@@ -19,12 +19,12 @@ See https://docs.bazel.build/versions/master/skylark/repository_rules.html
 """
 
 load("//internal/common:check_bazel_version.bzl", "check_bazel_version")
-load("//internal/common:os_name.bzl", "OS_ARCH_NAMES", "os_name")
+load("//internal/common:os_name.bzl", "OS_ARCH_NAMES", "assert_node_exists_for_host", "node_exists_for_os", "os_name")
 load("//internal/node:node_versions.bzl", "NODE_VERSIONS")
 load("//third_party/github.com/bazelbuild/bazel-skylib:lib/paths.bzl", "paths")
 load("//toolchains/node:node_toolchain_configure.bzl", "node_toolchain_configure")
 
-_DEFAULT_NODE_VERSION = "18.16.1"
+_DEFAULT_NODE_VERSION = "12.13.0"
 
 # @unsorted-dict-items
 _YARN_VERSIONS = {
@@ -39,15 +39,6 @@ _YARN_VERSIONS = {
     "1.19.1": ("yarn-v1.19.1.tar.gz", "yarn-v1.19.1", "34293da6266f2aae9690d59c2d764056053ff7eebc56b80b8df05010c3da9343"),
     "1.22.4": ("yarn-v1.22.4.tar.gz", "yarn-v1.22.4", "bc5316aa110b2f564a71a3d6e235be55b98714660870c5b6b2d2d3f12587fb58"),
     "1.22.10": ("yarn-v1.22.10.tar.gz", "yarn-v1.22.10", "7e433d4a77e2c79e6a7ae4866782608a8e8bcad3ec6783580577c59538381a6e"),
-    "1.22.11": ("yarn-v1.22.11.tar.gz", "yarn-v1.22.11", "2c320de14a6014f62d29c34fec78fdbb0bc71c9ccba48ed0668de452c1f5fe6c"),
-    "1.22.12": ("yarn-v1.22.12.tar.gz", "yarn-v1.22.12", "1bfc6a45ed9788193907d93bfd2070ed805357733d785ae56176705c0ec4cfc1"),
-    "1.22.13": ("yarn-v1.22.13.tar.gz", "yarn-v1.22.13", "92b312f0f159c63bbc4ff5f553da8d9b2ffd6886a53c7d9a678c50e2cf4ed321"),
-    "1.22.14": ("yarn-v1.22.14.tar.gz", "yarn-v1.22.14", "9b0c53cbca3f3cf7cdee35c74db538d54a6abca1c63ef0db10288e165184615d"),
-    "1.22.15": ("yarn-v1.22.15.tar.gz", "yarn-v1.22.15", "0c2841b9423f0fb9657ae6b18873f39551396ec242bfb882b11bed9e4648235e"),
-    "1.22.16": ("yarn-v1.22.16.tar.gz", "yarn-v1.22.16", "c0369d6a9aeb4f3b86095c6e6f64de7a7555a888e03260c3f02727636e1f1693"),
-    "1.22.17": ("yarn-v1.22.17.tar.gz", "yarn-v1.22.17", "267982c61119a055ba2b23d9cf90b02d3d16c202c03cb0c3a53b9633eae37249"),
-    "1.22.18": ("yarn-v1.22.18.tar.gz", "yarn-v1.22.18", "816e5c073b3d35936a398d1fe769ebbcd517298e3510b649e8fc67cd3a62e113"),
-    "1.22.19": ("yarn-v1.22.19.tar.gz", "yarn-v1.22.19", "732620bac8b1690d507274f025f3c6cfdc3627a84d9642e38a07452cc00e0f2e"),
     # When adding a new version. please update /docs/install.md
 }
 
@@ -193,6 +184,16 @@ and `{filename}` with the matching entry from the `node_repositories` attribute.
             `bazel run @nodejs//:yarn_node_repositories` or `bazel run @nodejs//:npm_node_repositories install`.
             If you use bazel-managed dependencies, you should omit this attribute.""",
     ),
+    "preserve_symlinks": attr.bool(
+        default = True,
+        doc = """Turn on --node_options=--preserve-symlinks for nodejs_binary and nodejs_test rules.
+
+When this option is turned on, node will preserve the symlinked path for resolves instead of the default
+behavior of resolving to the real path. This means that all required files must be in be included in your
+runfiles as it prevents the default behavior of potentially resolving outside of the runfiles. For example,
+all required files need to be included in your node_modules filegroup. This option is desirable as it gives
+a stronger guarantee of hermeticity which is required for remote execution.""",
+    ),
     "vendored_node": attr.label(
         allow_single_file = True,
         doc = """the local path to a pre-installed NodeJS runtime.
@@ -232,7 +233,6 @@ If this list is empty, we won't download yarn at all.
         doc = "the specific version of Yarn to install",
         default = "1.19.1",
     ),
-    "_yarn_increase_mutex_timeout_patch": attr.label(default = "//internal/npm_install:yarn-increase-mutex-timeout.patch"),
 }
 
 BUILT_IN_NODE_PLATFORMS = [
@@ -280,6 +280,9 @@ def _download_node(repository_ctx):
 
     node_version = repository_ctx.attr.node_version
 
+    # Skip the download if we know it will fail
+    if not node_exists_for_os(node_version, host_os):
+        return
     node_repositories = repository_ctx.attr.node_repositories
 
     # We insert our default value here, not on the attribute's default, so it isn't documented.
@@ -372,9 +375,6 @@ def _download_yarn(repository_ctx):
         sha256 = sha256,
     ))
 
-    patch_path = repository_ctx.path(repository_ctx.attr._yarn_increase_mutex_timeout_patch)
-    repository_ctx.execute(["patch", "lib/cli.js", patch_path], working_directory = YARN_EXTRACT_DIR)
-
 def _prepare_node(repository_ctx):
     """Sets up BUILD files and shell wrappers for the versions of NodeJS, npm & yarn just set up.
 
@@ -459,7 +459,11 @@ def _prepare_node(repository_ctx):
     npm_script_relative = npm_script if repository_ctx.attr.vendored_node else paths.relativize(npm_script, "bin")
     yarn_script_relative = yarn_script if repository_ctx.attr.vendored_yarn else paths.relativize(yarn_script, "bin")
 
-    node_args = "--preserve-symlinks"
+    if repository_ctx.attr.preserve_symlinks:
+        node_args = "--preserve-symlinks"
+    else:
+        node_args = ""
+
     # The entry points for node for osx/linux and windows
     if not is_windows:
         # Sets PATH and runs the application
@@ -483,6 +487,14 @@ SET SCRIPT_DIR=%~dp0
 SET PATH=%SCRIPT_DIR%;%PATH%
 CALL "%SCRIPT_DIR%\\{node}" {args} %*
 """.format(node = node_bin_relative, args = node_args))
+
+    # Shell script to set repository arguments for node used by nodejs_binary & nodejs_test launcher
+    repository_ctx.file("bin/node_repo_args.sh", content = """#!/usr/bin/env bash
+# Immediately exit if any command fails.
+set -e
+# Generated by node_repositories.bzl
+export NODE_REPOSITORY_ARGS="{args}"
+""".format(args = node_args), executable = True)
 
     # The entry points for npm for osx/linux and windows
     # Runs npm using appropriate node entry point
@@ -573,7 +585,11 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 
     # The entry points for yarn for osx/linux and windows.
     # Runs yarn using appropriate node entry point.
-    # Set YARN_IGNORE_PATH=1 so it doesn't go through wrappers set by `yarn-path` https://classic.yarnpkg.com/lang/en/docs/yarnrc/#toc-yarn-path
+    # Unset YARN_IGNORE_PATH before calling yarn incase it is set so that
+    # .yarnrc yarn-path is followed if set. This is for the case when calling
+    # bazel from yarn with `yarn bazel ...` and yarn follows yarn-path in
+    # .yarnrc it will set YARN_IGNORE_PATH=1 which will prevent the bazel
+    # call into yarn from also following the yarn-path as desired.
     if not is_windows:
         # Yarn entry point
         repository_ctx.file(
@@ -582,7 +598,7 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 # Generated by node_repositories.bzl
 # Immediately exit if any command fails.
 set -e
-export YARN_IGNORE_PATH=1
+unset YARN_IGNORE_PATH
 {get_script_dir}
 "$SCRIPT_DIR/{node}" "$SCRIPT_DIR/{script}" "$@"
 """.format(
@@ -602,7 +618,7 @@ set -e
 """ + GET_SCRIPT_DIR + "".join([
             """
 echo Running yarn "$@" in {root}
-export YARN_IGNORE_PATH=1
+unset YARN_IGNORE_PATH
 (cd "{root}"; "$SCRIPT_DIR/{node}" "$SCRIPT_DIR/{script}" "$@")
 """.format(
                 root = repository_ctx.path(package_json).dirname,
@@ -617,7 +633,7 @@ export YARN_IGNORE_PATH=1
             "bin/yarn.cmd",
             content = """@echo off
 SET SCRIPT_DIR=%~dp0
-SET "YARN_IGNORE_PATH=1"
+SET "YARN_IGNORE_PATH="
 "%SCRIPT_DIR%\\{node}" "%SCRIPT_DIR%\\{script}" %*
 """.format(
                 node = paths.relativize(node_entry, "bin"),
@@ -632,7 +648,7 @@ SET SCRIPT_DIR=%~dp0
 """ + "".join([
             """
 echo Running yarn %* in {root}
-SET "YARN_IGNORE_PATH=1"
+SET "YARN_IGNORE_PATH="
 cd /D "{root}"
 CALL "%SCRIPT_DIR%\\{node}" "%SCRIPT_DIR%\\{script}" %*
 if %errorlevel% neq 0 exit /b %errorlevel%
@@ -649,7 +665,8 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 package(default_visibility = ["//visibility:public"])
 exports_files([
   "run_npm.sh.template",
-  "run_npm.bat.template",{node_bin_export}{npm_bin_export}{npx_bin_export}{yarn_bin_export}
+  "run_npm.bat.template",
+  "bin/node_repo_args.sh",{node_bin_export}{npm_bin_export}{npx_bin_export}{yarn_bin_export}
   "{node_entry}",
   "{npm_entry}",
   "{yarn_entry}",
@@ -696,6 +713,7 @@ filegroup(
     ))
 
 def _nodejs_repo_impl(repository_ctx):
+    assert_node_exists_for_host(repository_ctx)
     _download_node(repository_ctx)
     _download_yarn(repository_ctx)
     _prepare_node(repository_ctx)
@@ -709,12 +727,15 @@ node_repositories_rule = repository_rule(
 )
 
 def _nodejs_host_os_alias_impl(repository_ctx):
+    assert_node_exists_for_host(repository_ctx)
+
     # Base BUILD file for this repository
     repository_ctx.file("BUILD.bazel", content = """# Generated by node_repositories.bzl
 package(default_visibility = ["//visibility:public"])
 # aliases for exports_files
 alias(name = "run_npm.sh.template", actual = "{node_repository}//:run_npm.sh.template")
 alias(name = "run_npm.bat.template", actual = "{node_repository}//:run_npm.bat.template")
+alias(name = "bin/node_repo_args.sh", actual = "{node_repository}//:bin/node_repo_args.sh")
 # aliases for other aliases
 alias(name = "node_bin", actual = "{node_repository}//:node_bin")
 alias(name = "npm_bin", actual = "{node_repository}//:npm_bin")
@@ -767,6 +788,9 @@ def node_repositories(**kwargs):
     for os_arch_name in OS_ARCH_NAMES:
         os_name = "_".join(os_arch_name)
 
+        # If we couldn't download node, don't make an external repo for it either
+        if not node_exists_for_os(node_version, os_name):
+            continue
         node_repository_name = "nodejs_%s" % os_name
         _maybe(
             node_repositories_rule,

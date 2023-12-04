@@ -11,8 +11,11 @@ bzl_library(
     visibility = ["//visibility:public"],
 )
 
-# Exported to be consumed for generating stardoc.
-exports_files(["npm_install.bzl"])
+exports_files([
+    "bulk_copy.sh",
+    # Exported to be consumed for generating stardoc.
+    "npm_install.bzl",
+])
 
 filegroup(
     name = "generate_build_file",

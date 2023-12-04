@@ -516,13 +516,37 @@ def _symlink_file(repository_ctx, f):
 
 def _copy_data_dependencies(repository_ctx):
     """Add data dependencies to the repository."""
-    total = len(repository_ctx.attr.data)
-    for i, f in enumerate(repository_ctx.attr.data):
-        repository_ctx.report_progress("Copying data dependencies (%s/%s)" % (i, total))
-        # Make copies of the data files instead of symlinking
-        # as yarn under linux will have trouble using symlinked
-        # files as npm file:// packages
-        _copy_file(repository_ctx, f)
+    # Collect inputs
+    input_files_list = []
+    input_files_base = str(repository_ctx.workspace_root)
+    for label in repository_ctx.attr.data:
+        if label.workspace_root != "":
+            fail("Only files from the main workspace can be given to `data`, but got %s" % label)
+        file = str(repository_ctx.path(label))
+        relative_file = file.removeprefix(input_files_base + "/")
+        input_files_list.append(relative_file)
+    out_dir = str(repository_ctx.path(_WORKSPACE_REROOTED_PATH))
+
+    # Write files list
+    input_files_list_file = "data_files.txt"
+    repository_ctx.file(
+        input_files_list_file,
+        content = "\n".join(input_files_list),
+    )
+
+    # Run copy script
+    result = repository_ctx.execute(
+        [
+            repository_ctx.path(Label("//internal/npm_install:bulk_copy.sh")),
+            input_files_list_file,
+            input_files_base,
+            out_dir,
+        ],
+        quiet = repository_ctx.attr.quiet,
+    )
+
+    if result.return_code != 0:
+        fail("bulk_copy.sh failed: \nSTDOUT:\n%s\nSTDERR:\n%s" % (result.stdout, result.stderr))
 
 def _add_node_repositories_info_deps(repository_ctx):
     # Add a dep to the node_info & yarn_info files from node_repositories
@@ -590,6 +614,7 @@ def _npm_install_impl(repository_ctx):
     repository_ctx.path(Label("//internal/npm_install:index.js"))
     repository_ctx.path(Label("@nodejs_%s//:node_info" % os_name(repository_ctx)))
     repository_ctx.path(Label("@nodejs_%s//:yarn_info" % os_name(repository_ctx)))
+    repository_ctx.path(Label("//internal/npm_install:bulk_copy.sh"))
 
     is_windows_host = is_windows_os(repository_ctx)
 
@@ -740,6 +765,7 @@ def _yarn_install_impl(repository_ctx):
     repository_ctx.path(Label("//internal/npm_install:index.js"))
     repository_ctx.path(Label("@nodejs_%s//:node_info" % os_name(repository_ctx)))
     repository_ctx.path(Label("@nodejs_%s//:yarn_info" % os_name(repository_ctx)))
+    repository_ctx.path(Label("//internal/npm_install:bulk_copy.sh"))
 
     is_windows_host = is_windows_os(repository_ctx)
 

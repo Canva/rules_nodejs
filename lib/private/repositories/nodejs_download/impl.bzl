@@ -432,7 +432,11 @@ def _prepare_node(repository_ctx):
             package(default_visibility = ["//visibility:public"])
             exports_files([
                 "run_npm.sh.template",
-                "run_npm.bat.template",{node_bin_export}{npm_bin_export}{npx_bin_export}{yarn_bin_export}
+                "run_npm.bat.template",
+                "{node_bin_export}",
+                "{npm_bin_export}",
+                "{npx_bin_export}",
+                "{yarn_bin_export}",
                 "{node_entry}",
                 "{npm_entry}",
                 "{yarn_entry}",
@@ -450,19 +454,17 @@ def _prepare_node(repository_ctx):
             )
             filegroup(
                 name = "yarn_files",
-                srcs = {yarn_files_glob}[":node_files"],
+                srcs = glob(["bin/yarnpkg/**"]) + [":node_files"],
             )
             filegroup(
                 name = "npm_files",
-                srcs = {npm_files_glob}[":node_files"],
+                srcs = glob(["bin/nodejs/**"]) + [":node_files"],
             )
         """).format(
-            node_bin_export = ("\n  \"%s\"," % node_bin),
-            npm_bin_export = ("\n  \"%s\"," % npm_bin),
-            npx_bin_export = ("\n  \"%s\"," % npx_bin),
-            npm_files_glob = "glob([\"bin/nodejs/**\"]) + ",
-            yarn_bin_export = ("\n  \"%s\"," % yarn_bin),
-            yarn_files_glob = "glob([\"bin/yarnpkg/**\"]) + ",
+            node_bin_export = node_bin,
+            npm_bin_export = npm_bin,
+            npx_bin_export = npx_bin,
+            yarn_bin_export = yarn_bin,
             node_bin_label = node_bin_label,
             npm_bin_label = npm_bin_label,
             npx_bin_label = npx_bin_label,

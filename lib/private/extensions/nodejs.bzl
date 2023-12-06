@@ -35,10 +35,8 @@ def _nodejs_impl(mctx):
                     target_tool = "@%s_%s//:node_bin" % (attrs.name, platform["id"]),
                 )
             # Toolchain registrations without triggering eager downloading
-            # TODO Rename this to something more appropriate
             nodejs_toolchains(
                 name = attrs.name,
-                node_version = attrs.node_version,
             )
             nodejs_download(
                 name = "%s_host" % attrs.name,

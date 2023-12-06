@@ -1,5 +1,5 @@
 """
-Public API NodeJS repositories, plus some legacy cruft that `yarn_install` needs.
+Public API NodeJS repositories.
 """
 
 load("//lib/private:utils/platform.bzl", "PLATFORMS")
@@ -43,5 +43,5 @@ def _nodejs_toolchains_impl(repository_ctx):
 
 nodejs_toolchains = repository_rule(
     _nodejs_toolchains_impl,
-    attrs = {"node_version": attr.string()},
+    attrs = {},
 )

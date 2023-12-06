@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-set -eu
+set -eu -o pipefail
 
 # The list of files to copy, relative to base so directories are preserved
 input_files_list="$1"

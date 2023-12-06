@@ -7,6 +7,7 @@ as the package manager.
 """
 
 load("//lib/private:repositories/yarn_install/attrs.bzl", "YARN_INSTALL_ATTRS")
+load("//lib/private:utils/strings.bzl", "dedent")
 
 visibility(["//lib/private"])
 
@@ -27,16 +28,18 @@ def _apply_patches(rctx, working_directory, patches, marker_file = None):
 
     for patch_file in patches:
         if marker_file:
-            command = """{patch_tool} {patch_args} < {patch_file}
-CODE=$?
-if [ $CODE -ne 0 ]; then
-    CODE=1
-    if [ -f \"{marker_file}\" ]; then
-        CODE=2
-    fi
-fi
-echo '1' > \"{marker_file}\"
-exit $CODE""".format(
+            command = dedent("""
+                {patch_tool} {patch_args} < {patch_file}
+                CODE=$?
+                if [ $CODE -ne 0 ]; then
+                    CODE=1
+                    if [ -f \"{marker_file}\" ]; then
+                        CODE=2
+                    fi
+                fi
+                echo '1' > \"{marker_file}\"
+                exit $CODE
+            """).format(
                 patch_tool = patch_tool,
                 patch_file = rctx.path(patch_file),
                 patch_args = " ".join([
@@ -127,21 +130,6 @@ def _add_scripts(rctx):
 # package.json, lock file & data files to and running the package manager in the
 # folder of the package.json file.
 _WORKSPACE_REROOTED_PATH = "_"
-
-# Returns the root of the user workspace. No built-in way to get
-# this but we can derive it from the path of the package.json file
-# in the user workspace sources.
-def _user_workspace_root(rctx):
-    package_json = rctx.attr.package_json
-    segments = []
-    if package_json.package:
-        segments.extend(package_json.package.split("/"))
-    segments.extend(package_json.name.split("/"))
-    segments.pop()
-    user_workspace_root = rctx.path(package_json).dirname
-    for i in segments:
-        user_workspace_root = user_workspace_root.dirname
-    return str(user_workspace_root)
 
 # Returns the path to a file within the re-rooted user workspace
 # under _WORKSPACE_REROOTED_PATH in this repo rule's external workspace
@@ -236,12 +224,13 @@ def _yarn_install_impl(rctx):
         # call into yarn from also following the yarn-path as desired.
         rctx.file(
             "_yarn.sh",
-            content = """#!/usr/bin/env bash
-# Immediately exit if any command fails.
-set -e
-unset YARN_IGNORE_PATH
-(cd "{root}"; "{yarn}" {yarn_args})
-""".format(
+            content = dedent("""
+                #!/usr/bin/env bash
+                # Immediately exit if any command fails.
+                set -e
+                unset YARN_IGNORE_PATH
+                (cd "{root}"; "{yarn}" {yarn_args})
+            """).format(
                 root = root,
                 yarn = rctx.path(yarn),
                 yarn_args = " ".join(yarn_args),
@@ -251,10 +240,11 @@ unset YARN_IGNORE_PATH
     else:
         rctx.file(
             "_yarn.cmd",
-            content = """@echo off
-set "YARN_IGNORE_PATH="
-cd /D "{root}" && "{yarn}" {yarn_args}
-""".format(
+            content = dedent("""
+                @echo off
+                set "YARN_IGNORE_PATH="
+                cd /D "{root}" && "{yarn}" {yarn_args}
+            """).format(
                 root = root,
                 yarn = rctx.path(yarn),
                 yarn_args = " ".join(yarn_args),

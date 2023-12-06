@@ -7,26 +7,14 @@ as the package manager.
 """
 
 load("//lib/private:repositories/yarn_install/attrs.bzl", "YARN_INSTALL_ATTRS")
-load("//lib/private:utils/check_bazel_version.bzl", "check_bazel_version")
 
 visibility(["//lib/private"])
-
-def _apply_pre_install_patches(rctx):
-    if len(rctx.attr.pre_install_patches) == 0:
-        return
-    if rctx.attr.symlink_node_modules:
-        fail("pre_install_patches cannot be used with symlink_node_modules enabled")
-    _apply_patches(rctx, _WORKSPACE_REROOTED_PATH, rctx.attr.pre_install_patches)
 
 def _apply_post_install_patches(rctx):
     if len(rctx.attr.post_install_patches) == 0:
         return
-    if rctx.attr.symlink_node_modules:
-        print("\nWARNING: @%s post_install_patches with symlink_node_modules enabled will run in your workspace and potentially modify source files" % rctx.name)
-    working_directory = _user_workspace_root(rctx) if rctx.attr.symlink_node_modules else _WORKSPACE_REROOTED_PATH
+    working_directory = _WORKSPACE_REROOTED_PATH
     marker_file = None
-    if rctx.attr.symlink_node_modules:
-        marker_file = "%s/node_modules/.bazel-post-install-patches" % rctx.path(rctx.attr.package_json).dirname
     _apply_patches(rctx, working_directory, rctx.attr.post_install_patches, marker_file)
 
 def _apply_patches(rctx, working_directory, patches, marker_file = None):
@@ -82,8 +70,7 @@ exit $CODE""".format(
             # If return code is 2 (see bash snippet above) that means a marker file was found before applying patches;
             # Treat patch failure as a warning in this case
             if st.return_code == 2:
-                print("""\nWARNING: @%s failed to apply patch file %s in %s:\n%s%s
-This can happen with symlink_node_modules enabled since your workspace node_modules is re-used between executions of the repository rule.""" % (rctx.name, patch_file, working_directory, st.stderr, st.stdout))
+                print("WARNING: @%s failed to apply patch file %s in %s:\n%s%s" % (rctx.name, patch_file, working_directory, st.stderr, st.stdout))
             else:
                 fail("Error applying patch %s in %s:\n%s%s" % (str(patch_file), working_directory, st.stderr, st.stdout))
 
@@ -208,40 +195,8 @@ def _copy_data_dependencies(rctx):
         # files as npm file:// packages
         _copy_file(rctx, f)
 
-def _symlink_node_modules(rctx):
-    package_json_dir = rctx.path(rctx.attr.package_json).dirname
-    if rctx.attr.symlink_node_modules:
-        rctx.symlink(
-            rctx.path(str(package_json_dir) + "/node_modules"),
-            rctx.path("node_modules"),
-        )
-    else:
-        rctx.symlink(
-            rctx.path(_rerooted_workspace_package_json_dir(rctx) + "/node_modules"),
-            rctx.path("node_modules"),
-        )
-
-def _check_min_bazel_version(rule, rctx):
-    if rctx.attr.symlink_node_modules:
-        # When using symlink_node_modules enforce the minimum Bazel version required
-        check_bazel_version(
-            message = """
-        A minimum Bazel version of 0.26.0 is required for the %s @%s repository rule.
-
-        By default, yarn_install and npm_install in build_bazel_rules_nodejs >= 0.30.0
-        depends on the managed directory feature added in Bazel 0.26.0. See
-        https://github.com/bazelbuild/rules_nodejs/wiki#migrating-to-rules_nodejs-030.
-
-        You can opt out of this feature by setting `symlink_node_modules = False`
-        on all of your yarn_install & npm_install rules.
-        """ % (rule, rctx.attr.name),
-            minimum_bazel_version = "0.26.0",
-        )
-
 def _yarn_install_impl(rctx):
     """Core implementation of yarn_install."""
-
-    _check_min_bazel_version("yarn_install", rctx)
 
     node = rctx.path(rctx.attr.host_node_bin)
     yarn = rctx.attr.host_yarn_bin
@@ -269,10 +224,7 @@ def _yarn_install_impl(rctx):
     yarn_args.extend(rctx.attr.args)
 
     # Run the package manager in the package.json folder
-    if rctx.attr.symlink_node_modules:
-        root = str(rctx.path(rctx.attr.package_json).dirname)
-    else:
-        root = str(rctx.path(_rerooted_workspace_package_json_dir(rctx)))
+    root = str(rctx.path(_rerooted_workspace_package_json_dir(rctx)))
 
     # The entry points for npm install for osx/linux and windows
     if not is_windows_host:
@@ -314,7 +266,6 @@ cd /D "{root}" && "{yarn}" {yarn_args}
     _copy_file(rctx, rctx.attr.package_json)
     _copy_data_dependencies(rctx)
     _add_scripts(rctx)
-    _apply_pre_install_patches(rctx)
 
     result = rctx.execute(
         [node, "pre_process_package_json.js", rctx.path(rctx.attr.package_json), "yarn"],
@@ -340,7 +291,6 @@ cd /D "{root}" && "{yarn}" {yarn_args}
     if result.return_code:
         fail("yarn_install failed: %s (%s)" % (result.stdout, result.stderr))
 
-    _symlink_node_modules(rctx)
     _apply_post_install_patches(rctx)
 
     result = rctx.execute([

@@ -12,15 +12,6 @@ YARN_INSTALL_ATTRS = {
     "data": attr.label_list(
         doc = """
             Data files required by this rule.
-
-            If symlink_node_modules is True, this attribute is optional since the package manager
-            will run in your workspace folder. It is recommended, however, that all files that the
-            package manager depends on, such as `.rc` files or files used in `postinstall`, are added
-            symlink_node_modules is True so that the repository rule is rerun when any of these files
-            change.
-
-            If symlink_node_modules is False, the package manager is run in the bazel external
-            repository so all files that the package manager depends on must be listed.
         """,
     ),
     "environment": attr.string_dict(
@@ -247,28 +238,6 @@ YARN_INSTALL_ATTRS = {
             This can be used to make changes to installed packages after the package manager runs.
 
             File paths in patches should be relative to workspace root.
-
-            Use with caution when `symlink_node_modules` enabled as the patches will run in your workspace and
-            will modify files in your workspace.
-
-            NB: If `symlink_node_modules` is enabled, the node_modules folder is re-used between executions of the
-                repository rule. Patches may be re-applied to files in this case and fail to apply. A marker file
-                `node_modules/.bazel-post-install-patches` is left in this mode when patches are applied. When the 
-                marker file is detected, patch file failures are treated as WARNINGS. For this reason, it is recommended
-                to patch npm packages with an npm tool such as https://www.npmjs.com/package/patch-package when
-                `symlink_node_modules` is enabled which handles re-apply patching logic more robustly.
-        """,
-    ),
-    "pre_install_patches": attr.label_list(
-        doc = """
-            Patch files to apply before running package manager.
-
-            This can be used to make changes to package.json or other data files passed in before running the
-            package manager.
-
-            File paths in patches should be relative to workspace root.
-
-            Not supported with `symlink_node_modules` enabled.
         """,
     ),
     "quiet": attr.bool(
@@ -284,24 +253,6 @@ YARN_INSTALL_ATTRS = {
             All transitive dependencies are given limited visibility, enforcing that all direct dependencies are
             listed in the `package.json` file.
         """,
-    ),
-    "symlink_node_modules": attr.bool(
-        doc = """
-            Turn symlinking of node_modules on
-
-            This requires the use of Bazel 0.26.0 and the experimental
-            managed_directories feature.
-
-            When true, the package manager will run in the package.json folder
-            and the resulting node_modules folder will be symlinked into the
-            external repository create by this rule.
-
-            When false, the package manager will run in the external repository
-            created by this rule and any files other than the package.json file and
-            the lock file that are required for it to run should be listed in the
-            data attribute.
-        """,
-        default = True,
     ),
     "timeout": attr.int(
         default = 3600,

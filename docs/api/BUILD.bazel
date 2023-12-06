@@ -28,7 +28,10 @@ stardoc(
 stardoc(
     name = "rules-docs",
     input = "//lib:rules.bzl",
-    deps = ["//lib/private:bzl-source"],
+    deps = [
+        "//lib/private:bzl-source",
+        "@bazel_tools//tools/build_defs/repo:cache.bzl",
+    ],
     out = "__rules.md",
 )
 

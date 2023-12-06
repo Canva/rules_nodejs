@@ -1,0 +1,44 @@
+name: Continuous Integration
+on:
+  # Main branch updated
+  push:
+    #branches:
+    #  - main
+  # Pull request
+  pull_request:
+    types:
+      # Newly opened
+      - opened
+      # Updated (excludes change of base branch)
+      - synchronize
+
+jobs:
+  test:
+    # Development of ruleset proper only supported on macOS and Linux
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Mount bazel cache
+      uses: actions/cache@v3
+      with:
+        path: "~/.cache/bazel"
+        key: bazel
+    - run: bazel test //...
+  e2e:
+    strategy:
+      # TODO Cover macOS and Windows
+      matrix:
+        scenario:
+        - bazel_6_litmus
+        - bazel_6_litmus_workspace
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Mount bazel cache
+      uses: actions/cache@v3
+      with:
+        path: "~/.cache/bazel"
+        key: bazel-e2e-${{ matrix.scenario }}
+    - run: cd e2e/${{ matrix.scenario }}
+    - run: bazel test //...
+

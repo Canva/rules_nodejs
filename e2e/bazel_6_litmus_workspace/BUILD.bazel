@@ -1,0 +1,8 @@
+load("@build_bazel_rules_nodejs//lib:rules.bzl", "nodejs_test")
+
+nodejs_test(
+    name = "bar",
+    entry_point = "bar.js",
+    # TODO When sandboxed code path used, Bazel dumps us in runfiles dir (which should not exist) and populates it
+    tags = ["no-sandbox"],
+)

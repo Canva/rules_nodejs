@@ -23,7 +23,6 @@ def nodejs_download(**attrs):
         )
     _nodejs_toolchains(
         name = name,
-        node_version = attrs["node_version"],
     )
     _nodejs_download_host(
         name = "%s_host" % name,

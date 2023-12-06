@@ -74,7 +74,6 @@ def _to_manifest_path(ctx, file):
 def create_windows_native_launcher_script(ctx, shell_script):
     """
     Create a Windows Batch file to launch the given shell script.
-    The rule should specify @bazel_tools//tools/sh:toolchain_type as a required toolchain.
     """
     name = shell_script.basename
     if name.endswith(".sh"):

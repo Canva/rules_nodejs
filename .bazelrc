@@ -7,3 +7,13 @@ query --@aspect_rules_ts//ts:skipLibCheck=honor_tsconfig
 build --@aspect_rules_ts//ts:default_to_tsc_transpiler
 fetch --@aspect_rules_ts//ts:default_to_tsc_transpiler
 query --@aspect_rules_ts//ts:default_to_tsc_transpiler
+
+# Use use home directory instead of /private/var/tmp/_bazel_$USER/...
+startup --output_user_root=~/.bazel
+
+# Shared disk cache
+build --disk_cache=~/.bazel/action-cache
+build --repository_cache=~/.bazel/repo-cache
+
+# Contain Bazel helper symlinks under .bazel/
+build --symlink_prefix=.bazel/

@@ -308,6 +308,18 @@ data attribute.
         default = 3600,
         doc = """Maximum duration of the package manager execution in seconds.""",
     ),
+    "_inputs": attr.label_list(
+        default = [
+            "//internal/npm_install:pre_process_package_json.js",
+            "//internal/npm_install:index.js",
+            "//internal/npm_install:bulk_copy.sh",
+        ],
+        doc = """
+            Internal files used by npm_install and yarn_install.
+
+            Listing them here allows Bazel to mark dependencies earlier, permitting fewer and faster repository fetch restarts.
+        """,
+    )
 })
 
 PROXY_ENVVARS = [
@@ -600,21 +612,14 @@ def _propagate_http_proxy_env(repository_ctx, env):
 def _npm_install_impl(repository_ctx):
     """Core implementation of npm_install."""
 
-    _check_min_bazel_version("npm_install", repository_ctx)
-
-    is_windows_host = is_windows_os(repository_ctx)
-    # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
-    repository_ctx.path(repository_ctx.attr.package_json)
-    repository_ctx.path(repository_ctx.attr.yarn_lock)
-    for f in repository_ctx.attr.data:
-        repository_ctx.path(f)
+    # Mark generated inputs as dependencies for cheaper restarts
+    # Explicit inputs are already covered: https://github.com/bazelbuild/bazel/blob/e12c44da8efb77a5d87c00e64499ac3c504ae943/src/main/java/com/google/devtools/build/lib/bazel/repository/starlark/StarlarkRepositoryContext.java#L519
     node = repository_ctx.path(get_node_label(repository_ctx))
-    npm = get_npm_label(repository_ctx)
-    repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
-    repository_ctx.path(Label("//internal/npm_install:index.js"))
     repository_ctx.path(Label("@nodejs_%s//:node_info" % os_name(repository_ctx)))
     repository_ctx.path(Label("@nodejs_%s//:yarn_info" % os_name(repository_ctx)))
-    repository_ctx.path(Label("//internal/npm_install:bulk_copy.sh"))
+    npm = get_npm_label(repository_ctx)
+
+    _check_min_bazel_version("npm_install", repository_ctx)
 
     is_windows_host = is_windows_os(repository_ctx)
 
@@ -752,20 +757,14 @@ check if yarn is being run by the `npm_install` repository rule.""",
 def _yarn_install_impl(repository_ctx):
     """Core implementation of yarn_install."""
 
-    _check_min_bazel_version("yarn_install", repository_ctx)
-
-    # Mark inputs as dependencies with repository_ctx.path to reduce repo fetch restart costs
-    repository_ctx.path(repository_ctx.attr.package_json)
-    repository_ctx.path(repository_ctx.attr.yarn_lock)
-    for f in repository_ctx.attr.data:
-        repository_ctx.path(f)
+    # Mark generated inputs as dependencies for cheaper restarts
+    # Explicit inputs are already covered: https://github.com/bazelbuild/bazel/blob/e12c44da8efb77a5d87c00e64499ac3c504ae943/src/main/java/com/google/devtools/build/lib/bazel/repository/starlark/StarlarkRepositoryContext.java#L519
     node = repository_ctx.path(get_node_label(repository_ctx))
-    yarn = get_yarn_label(repository_ctx)
-    repository_ctx.path(Label("//internal/npm_install:pre_process_package_json.js"))
-    repository_ctx.path(Label("//internal/npm_install:index.js"))
     repository_ctx.path(Label("@nodejs_%s//:node_info" % os_name(repository_ctx)))
     repository_ctx.path(Label("@nodejs_%s//:yarn_info" % os_name(repository_ctx)))
-    repository_ctx.path(Label("//internal/npm_install:bulk_copy.sh"))
+    yarn = get_yarn_label(repository_ctx)
+
+    _check_min_bazel_version("yarn_install", repository_ctx)
 
     is_windows_host = is_windows_os(repository_ctx)
 

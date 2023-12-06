@@ -216,16 +216,6 @@ YARN_INSTALL_ATTRS = {
         default = True,
         doc = "If stdout and stderr should be printed to the terminal.",
     ),
-    "strict_visibility": attr.bool(
-        default = True,
-        doc = """
-            Turn on stricter visibility for generated BUILD.bazel files
-
-            When enabled, only dependencies within the given `package.json` file are given public visibility.
-            All transitive dependencies are given limited visibility, enforcing that all direct dependencies are
-            listed in the `package.json` file.
-        """,
-    ),
     "timeout": attr.int(
         default = 3600,
         doc = "Maximum duration of the package manager execution in seconds.",

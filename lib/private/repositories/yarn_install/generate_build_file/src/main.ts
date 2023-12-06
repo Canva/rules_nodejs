@@ -45,7 +45,6 @@ let config: any = {
   package_lock: 'yarn.lock',
   package_path: '',
   rule_type: 'yarn_install',
-  strict_visibility: true,
   workspace_rerooted_path: '',
   workspace: '',
 };
@@ -264,13 +263,13 @@ function generatePackageBuildFiles(pkg: Dep) {
     buildFilePath = 'BUILD.bazel'
   }
 
-  // if the dependency doesn't appear in the given package.json file, and the 'strict_visibility' flag is set
-  // on the npm_install / yarn_install rule, then set the visibility to be limited internally to the @repo workspace
+  // if the dependency doesn't appear in the given package.json file, then set the visibility to
+  // be limited internally to the @repo workspace
   // if the dependency is listed, set it as public
   // if the flag is false, then always set public visibility
-  const visibility = !pkg._directDependency && config.strict_visibility ?
-      config.limited_visibility :
-      PUBLIC_VISIBILITY;
+  const visibility = !pkg._directDependency
+      ? config.limited_visibility
+      : PUBLIC_VISIBILITY;
 
   // If the package didn't ship a bin/BUILD file, generate one.
   if (!pkg._files.includes('bin/BUILD.bazel') && !pkg._files.includes('bin/BUILD')) {

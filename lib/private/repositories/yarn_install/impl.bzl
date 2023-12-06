@@ -33,7 +33,6 @@ def _create_build_files(rctx, rule_type, node, lock_file, generate_local_modules
         package_lock = str(rctx.path(lock_file)),
         package_path = rctx.attr.package_path,
         rule_type = rule_type,
-        strict_visibility = rctx.attr.strict_visibility,
         workspace = rctx.attr.name,
         workspace_rerooted_path = _WORKSPACE_REROOTED_PATH,
     ).to_json()

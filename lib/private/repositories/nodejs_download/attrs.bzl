@@ -39,16 +39,6 @@ COMMON_ATTRS = {
         mandatory = True,
         doc = "The specific version of NodeJS to install.",
     ),
-    # TODO Remove this
-    "package_json": attr.label_list(
-        doc = """
-            (ADVANCED, not recommended)
-            A list of labels, which indicate the package.json files that will be installed
-            when you manually run the package manager, e.g. with
-            `bazel run @nodejs//:yarn_node_repositories` or `bazel run @nodejs//:npm_node_repositories install`.
-            If you use bazel-managed dependencies, you should omit this attribute.
-        """,
-    ),
     "preserve_symlinks": attr.bool(
         default = True,
         doc = """

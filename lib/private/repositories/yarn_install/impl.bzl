@@ -11,72 +11,6 @@ load("//lib/private:utils/strings.bzl", "dedent")
 
 visibility(["//lib/private"])
 
-def _apply_post_install_patches(rctx):
-    if len(rctx.attr.post_install_patches) == 0:
-        return
-    working_directory = _WORKSPACE_REROOTED_PATH
-    marker_file = None
-    _apply_patches(rctx, working_directory, rctx.attr.post_install_patches, marker_file)
-
-def _apply_patches(rctx, working_directory, patches, marker_file = None):
-    bash_exe = rctx.os.environ["BAZEL_SH"] if "BAZEL_SH" in rctx.os.environ else "bash"
-
-    patch_tool = rctx.attr.patch_tool
-    if not patch_tool:
-        patch_tool = "patch"
-    patch_args = rctx.attr.patch_args
-
-    for patch_file in patches:
-        if marker_file:
-            command = dedent("""
-                {patch_tool} {patch_args} < {patch_file}
-                CODE=$?
-                if [ $CODE -ne 0 ]; then
-                    CODE=1
-                    if [ -f \"{marker_file}\" ]; then
-                        CODE=2
-                    fi
-                fi
-                echo '1' > \"{marker_file}\"
-                exit $CODE
-            """).format(
-                patch_tool = patch_tool,
-                patch_file = rctx.path(patch_file),
-                patch_args = " ".join([
-                    "'%s'" % arg
-                    for arg in patch_args
-                ]),
-                marker_file = marker_file,
-            )
-        else:
-            command = "{patch_tool} {patch_args} < {patch_file}".format(
-                patch_tool = patch_tool,
-                patch_file = rctx.path(patch_file),
-                patch_args = " ".join([
-                    "'%s'" % arg
-                    for arg in patch_args
-                ]),
-            )
-
-        if not rctx.attr.quiet:
-            print("@%s appling patch file %s in %s" % (rctx.name, patch_file, working_directory))
-            if marker_file:
-                print("@%s leaving patches marker file %s" % (rctx.name, marker_file))
-        st = rctx.execute(
-            [bash_exe, "-c", command],
-            quiet = rctx.attr.quiet,
-            # Working directory is _ which is where all files are copied to and
-            # where the install is run; patches should be relative to workspace root.
-            working_directory = working_directory,
-        )
-        if st.return_code:
-            # If return code is 2 (see bash snippet above) that means a marker file was found before applying patches;
-            # Treat patch failure as a warning in this case
-            if st.return_code == 2:
-                print("WARNING: @%s failed to apply patch file %s in %s:\n%s%s" % (rctx.name, patch_file, working_directory, st.stderr, st.stdout))
-            else:
-                fail("Error applying patch %s in %s:\n%s%s" % (str(patch_file), working_directory, st.stderr, st.stdout))
-
 def _create_build_files(rctx, rule_type, node, lock_file, generate_local_modules_build_files):
     rctx.report_progress("Processing node_modules: installing Bazel packages and generating BUILD files")
     if rctx.attr.manual_build_file_contents:
@@ -280,8 +214,6 @@ def _yarn_install_impl(rctx):
     )
     if result.return_code:
         fail("yarn_install failed: %s (%s)" % (result.stdout, result.stderr))
-
-    _apply_post_install_patches(rctx)
 
     result = rctx.execute([
         "find",

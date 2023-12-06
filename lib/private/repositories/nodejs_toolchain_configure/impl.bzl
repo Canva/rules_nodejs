@@ -21,7 +21,7 @@ def _impl(rctx):
 
     rctx.template(
         "BUILD.bazel",
-        Label("//lib/private:repositories/nodejs_toolchain_configure/BUILD.bazel.tpl"),
+        rctx.attr._build_file_template,
         substitutions,
         False,
     )
@@ -36,6 +36,9 @@ nodejs_toolchain_configure = repository_rule(
         "target_tool_path": attr.string(
             doc = "Absolute path to a pre-installed nodejs binary for the target os.",
             mandatory = False,
+        ),
+        "_build_file_template": attr.label(
+            default = "//lib/private:repositories/nodejs_toolchain_configure/BUILD.bazel.tpl",
         ),
     },
     doc = "Creates an external repository with a node_toolchain //:toolchain target properly configured.",

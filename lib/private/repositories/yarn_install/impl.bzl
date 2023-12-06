@@ -126,13 +126,13 @@ def _create_build_files(rctx, rule_type, node, lock_file, generate_local_modules
 def _add_scripts(rctx):
     rctx.template(
         "pre_process_package_json.js",
-        rctx.path(Label("//lib/internal/repositories/yarn_install:pre_process_package_json.js")),
+        rctx.path(rctx.attr._pre_process_package_json_script),
         {},
     )
 
     rctx.template(
         "index.js",
-        rctx.path(Label("//lib/internal/repositories/yarn_install:index.js")),
+        rctx.path(rctx.attr._generate_build_file_script),
         {},
     )
 
@@ -208,19 +208,6 @@ def _copy_data_dependencies(rctx):
         # files as npm file:// packages
         _copy_file(rctx, f)
 
-def _add_node_repositories_info_deps(rctx):
-    pass
-    # Add a dep to the node_info & yarn_info files from node_repositories
-    # so that if the node or yarn versions change we re-run the repository rule
-    # rctx.symlink(
-    #     Label("@nodejs//:node_info"),
-    #     rctx.path("_node_info"),
-    # )
-    # rctx.symlink(
-    #     Label("@nodejs//:yarn_info"),
-    #     rctx.path("_yarn_info"),
-    # )
-
 def _symlink_node_modules(rctx):
     package_json_dir = rctx.path(rctx.attr.package_json).dirname
     if rctx.attr.symlink_node_modules:
@@ -256,18 +243,8 @@ def _yarn_install_impl(rctx):
 
     _check_min_bazel_version("yarn_install", rctx)
 
-    # Mark inputs as dependencies with rctx.path to reduce repo fetch restart costs
-    rctx.path(rctx.attr.package_json)
-    rctx.path(rctx.attr.yarn_lock)
-    for f in rctx.attr.data:
-        rctx.path(f)
     node = rctx.path(rctx.attr.host_node_bin)
     yarn = rctx.attr.host_yarn_bin
-    rctx.path(Label("//lib/internal/repositories/yarn_install:pre_process_package_json.js"))
-    rctx.path(Label("//lib/internal/repositories/yarn_install:index.js"))
-    # TODO These are present supposedly to ensure the repo reruns when node/yarn changes, but may be unnecessary
-    # rctx.path(Label("@nodejs//:node_info"))
-    # rctx.path(Label("@nodejs//:yarn_info"))
 
     is_windows_host = rctx.os.name == "windows"
 
@@ -337,7 +314,6 @@ cd /D "{root}" && "{yarn}" {yarn_args}
     _copy_file(rctx, rctx.attr.package_json)
     _copy_data_dependencies(rctx)
     _add_scripts(rctx)
-    _add_node_repositories_info_deps(rctx)
     _apply_pre_install_patches(rctx)
 
     result = rctx.execute(

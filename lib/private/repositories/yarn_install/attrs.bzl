@@ -361,4 +361,10 @@ YARN_INSTALL_ATTRS = {
         mandatory = True,
         allow_single_file = True,
     ),
+    "_generate_build_file_script": attr.label(
+        default = "//lib/internal/repositories/yarn_install:index.js",
+    ),
+    "_pre_process_package_json_script": attr.label(
+        default = "//lib/internal/repositories/yarn_install:pre_process_package_json.js",
+    ),
 }

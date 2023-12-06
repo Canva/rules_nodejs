@@ -126,66 +126,6 @@ YARN_INSTALL_ATTRS = {
         """,
         default = [],
     ),
-    "links": attr.string_dict(
-        doc = """
-            Targets to link as npm packages.
-
-            A mapping of npm package names to bazel targets to linked into node_modules.
-
-            If `package_path` is also set, the bazel target will be linked to the node_modules at `package_path`
-            along with other 3rd party npm packages from this rule.
-
-            For example,
-
-            ```
-            yarn_install(
-                name = "npm",
-                package_json = "//web:package.json",
-                yarn_lock = "//web:yarn.lock",
-                package_path = "web",
-                links = {
-                    "@scope/target": "//some/scoped/target",
-                    "target": "//some/target",
-                },
-            )
-            ```
-
-            creates targets in the @npm external workspace that can be used by other rules which
-            are linked into `web/node_modules` along side the 3rd party deps since the `project_path` is `web`.
-
-            The above links will create the targets,
-
-            ```
-            @npm//@scope/target
-            @npm//target
-            ```
-
-            that can be referenced as `data` or `deps` by other rules such as `nodejs_binary` and `ts_project`
-            and can be required as `@scope/target` and `target` with standard node_modules resolution at runtime,
-
-            ```
-            nodejs_binary(
-                name = "bin",
-                entry_point = "bin.js",
-                deps = [
-                    "@npm//@scope/target",
-                    "@npm//target"
-                    "@npm//other/dep"
-                ],
-            )
-
-            ts_project(
-                name = "test",
-                srcs = [...],
-                deps = [
-                    "@npm//@scope/target",
-                    "@npm//target"
-                    "@npm//other/dep"
-                ],
-            )
-            ```
-        """,
-    ),
     "manual_build_file_contents": attr.string(
         doc = """
             Experimental attribute that can be used to override the generated BUILD.bazel file and set its contents manually.

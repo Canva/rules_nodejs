@@ -16,19 +16,10 @@ def _create_build_files(rctx, rule_type, node, lock_file, generate_local_modules
     if rctx.attr.manual_build_file_contents:
         rctx.file("manual_build_file_contents", rctx.attr.manual_build_file_contents)
 
-    # validate links
-    validated_links = {}
-    for k, v in rctx.attr.links.items():
-        if v.startswith("//"):
-            v = "@%s" % v
-        if not v.startswith("@"):
-            fail("link target must be label of form '@wksp//path/to:target', '@//path/to:target' or '//path/to:target'")
-        validated_links[k] = v
     generate_config_json = struct(
         exports_directories_only = rctx.attr.exports_directories_only,
         generate_local_modules_build_files = generate_local_modules_build_files,
         included_files = rctx.attr.included_files,
-        links = validated_links,
         package_json = str(rctx.path(rctx.attr.package_json)),
         package_lock = str(rctx.path(lock_file)),
         package_path = rctx.attr.package_path,

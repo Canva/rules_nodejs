@@ -40,7 +40,6 @@ let config: any = {
   exports_directories_only: false,
   generate_local_modules_build_files: false,
   included_files: [],
-  links: {},
   package_json: 'package.json',
   package_lock: 'yarn.lock',
   package_path: '',
@@ -128,25 +127,6 @@ function generateBuildFiles(pkgs: Dep[]) {
   generateRootBuildFile(pkgs.filter(pkg => !pkg._isNested))
   pkgs.filter(pkg => !pkg._isNested).forEach(pkg => generatePackageBuildFiles(pkg));
   findScopes().forEach(scope => generateScopeBuildFiles(scope, pkgs));
-  // Allow this to overwrite any previously generated BUILD files so that user links take priority
-  // over package manager installed npm packages
-  generateLinksBuildFiles(config.links)
-}
-
-function generateLinksBuildFiles(links: {[key: string]: string}) {
-  for (const packageName of Object.keys(links)) {
-    const target = links[packageName];
-    const basename = packageName.split('/').pop();
-    const starlark = generateBuildFileHeader() +
-        `load("@build_bazel_rules_nodejs//internal/linker:npm_link.bzl", "npm_link")
-npm_link(
-    name = "${basename}",
-    target = "${target}",
-    package_name = "${packageName}",
-    package_path = "${config.package_path}",
-)`;
-    writeFileSync(path.posix.join(packageName, 'BUILD.bazel'), starlark);
-  }
 }
 
 /**

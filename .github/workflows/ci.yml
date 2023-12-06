@@ -39,6 +39,6 @@ jobs:
       with:
         path: "~/.cache/bazel"
         key: bazel-e2e-${{ matrix.scenario }}
-    - run: cd e2e/${{ matrix.scenario }}
     - run: bazel test //...
+      working-directory: e2e/${{ matrix.scenario }}
 

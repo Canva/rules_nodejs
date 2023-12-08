@@ -137,12 +137,12 @@ See the section on stamping in the [README](stamping)
     ),
     "_npm_script_generator": attr.label(
         default = Label("//internal/pkg_npm:npm_script_generator"),
-        cfg = "host",
+        cfg = "exec",
         executable = True,
     ),
     "_packager": attr.label(
         default = Label("//internal/pkg_npm:packager"),
-        cfg = "host",
+        cfg = "exec",
         executable = True,
     ),
     "_run_npm_bat_template": attr.label(
@@ -206,7 +206,7 @@ def create_package(ctx, deps_files, nested_packages):
         # that single directory and there is no work to do
         package_dir = all_files[0]
 
-        _create_npm_scripts(ctx, package_dir)
+        _create_npm_scripts(ctx)
 
         return package_dir
 
@@ -260,15 +260,14 @@ def create_package(ctx, deps_files, nested_packages):
         arguments = [args],
     )
 
-    _create_npm_scripts(ctx, package_dir)
+    _create_npm_scripts(ctx)
 
     return package_dir
 
-def _create_npm_scripts(ctx, package_dir):
+def _create_npm_scripts(ctx):
     args = ctx.actions.args()
 
     args.add_all([
-        package_dir.path,
         ctx.outputs.pack_sh.path,
         ctx.outputs.publish_sh.path,
         ctx.file._run_npm_template.path,
@@ -281,13 +280,16 @@ def _create_npm_scripts(ctx, package_dir):
         progress_message = "Generating npm pack & publish scripts",
         mnemonic = "GenerateNpmScripts",
         executable = ctx.executable._npm_script_generator,
-        inputs = [ctx.file._run_npm_template, ctx.file._run_npm_bat_template, package_dir],
+        inputs = [ctx.file._run_npm_template, ctx.file._run_npm_bat_template],
         outputs = [ctx.outputs.pack_sh, ctx.outputs.publish_sh, ctx.outputs.pack_bat, ctx.outputs.publish_bat],
         arguments = [args],
-        # Must be run local (no sandbox) so that the pwd is the actual execroot
-        # in the script which is used to generate the path in the pack & publish
-        # scripts.
-        execution_requirements = {"local": "1"},
+        # Cannot be built remotely (template contains absolute path to npm executable).
+        # Cannot be built with sandboxing (references files outside sandbox).
+        # Can be cached, because absolute path is a standard input from a repo rule.
+        execution_requirements = {
+            "no-remote-exec": "",
+            "no-sandbox": "",
+        },
     )
 
 def _pkg_npm(ctx):
@@ -326,7 +328,6 @@ def _pkg_npm(ctx):
     result = [
         DefaultInfo(
             files = package_dir_depset,
-            runfiles = ctx.runfiles([package_dir]),
         ),
     ]
 
@@ -385,7 +386,8 @@ def pkg_npm_macro(name, tgz = None, **kwargs):
             outs = [tgz],
             # NOTE(mattem): on windows, it seems to output a buch of other stuff on stdout when piping, so pipe to tail
             # and grab the last line
-            cmd = "$(location :%s.pack) 2>/dev/null | tail -1 | xargs -I {} cp {} $@" % name,
+            # pass in package path
+            cmd = "$(location :%s.pack) $(location :%s) | tail -1 | xargs -I {} cp {} $@" % (name, name),
             srcs = [
                 name,
             ],
@@ -393,7 +395,9 @@ def pkg_npm_macro(name, tgz = None, **kwargs):
                 ":%s.pack" % name,
             ],
             tags = [
-                "local",
+                # Inherits limitations of %s.pack (due to absolute path to npm)
+                "no-remote-exec",
+                "no-sandbox",
             ],
             visibility = kwargs.get("visibility"),
         )

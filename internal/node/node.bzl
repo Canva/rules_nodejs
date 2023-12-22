@@ -253,14 +253,11 @@ fi
     node_tool_files.append(ctx.file._lcov_merger_script)
     node_tool_files.append(node_modules_manifest)
 
-    is_builtin = ctx.attr._node.label.workspace_name in ["nodejs_%s" % p for p in BUILT_IN_NODE_PLATFORMS]
-
     runfiles = []
     runfiles.extend(node_tool_files)
     runfiles.extend(ctx.files._bash_runfile_helper)
     runfiles.append(ctx.outputs.loader_script)
     runfiles.append(ctx.outputs.require_patch_script)
-    #runfiles.append(ctx.file._repository_args)
 
     # First replace any instances of "$(rlocation " with "$$(rlocation " to preserve
     # legacy uses of "$(rlocation"
@@ -577,10 +574,6 @@ Predefined genrule variables are not supported in this context.
     ),
     "_loader_template": attr.label(
         default = Label("//internal/node:loader.js"),
-        allow_single_file = True,
-    ),
-    "_node": attr.label(
-        default = Label("@nodejs//:node_bin"),
         allow_single_file = True,
     ),
     "_node_patches_script": attr.label(

@@ -253,14 +253,11 @@ fi
     node_tool_files.append(ctx.file._lcov_merger_script)
     node_tool_files.append(node_modules_manifest)
 
-    is_builtin = ctx.attr._node.label.workspace_name in ["nodejs_%s" % p for p in BUILT_IN_NODE_PLATFORMS]
-
     runfiles = []
     runfiles.extend(node_tool_files)
     runfiles.extend(ctx.files._bash_runfile_helper)
     runfiles.append(ctx.outputs.loader_script)
     runfiles.append(ctx.outputs.require_patch_script)
-    #runfiles.append(ctx.file._repository_args)
 
     # First replace any instances of "$(rlocation " with "$$(rlocation " to preserve
     # legacy uses of "$(rlocation"
@@ -309,7 +306,6 @@ fi
         "TEMPLATED_loader_script": _to_manifest_path(ctx, ctx.outputs.loader_script),
         "TEMPLATED_modules_manifest": _to_manifest_path(ctx, node_modules_manifest),
         "TEMPLATED_node_patches_script": _to_manifest_path(ctx, ctx.file._node_patches_script),
-        #"TEMPLATED_repository_args": _to_manifest_path(ctx, ctx.file._repository_args),
         "TEMPLATED_require_patch_script": _to_manifest_path(ctx, ctx.outputs.require_patch_script),
         "TEMPLATED_runfiles_helper_script": _to_manifest_path(ctx, ctx.file._runfile_helpers_main),
         "TEMPLATED_vendored_node": ctx.toolchains["@build_bazel_rules_nodejs//toolchains/node:toolchain_type"].nodeinfo.target_tool_path,
@@ -579,16 +575,8 @@ Predefined genrule variables are not supported in this context.
         default = Label("//internal/node:loader.js"),
         allow_single_file = True,
     ),
-    "_node": attr.label(
-        default = Label("@nodejs//:node_bin"),
-        allow_single_file = True,
-    ),
     "_node_patches_script": attr.label(
         default = Label("//internal/node:node_patches.js"),
-        allow_single_file = True,
-    ),
-    "_repository_args": attr.label(
-        default = Label("@nodejs//:bin/node_repo_args.sh"),
         allow_single_file = True,
     ),
     "_require_patch_template": attr.label(

@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Capture initial env var state
+readarray -d '' INIT_ENV_ARGS < <(env -0)
+
 # --- begin runfiles.bash initialization v2 ---
 # Copy-pasted from the Bazel Bash runfiles library v2.
 set -uo pipefail; f=build_bazel_rules_nodejs/third_party/github.com/bazelbuild/bazel/tools/bash/runfiles/runfiles.bash
@@ -390,14 +393,29 @@ if [[ -n "$NODE_WORKING_DIR" ]]; then
 fi
 set +e
 
+# Prepare NodeJS args plus a cleaned environment
+spawn_args=(
+  -i
+  "${INIT_ENV_ARGS[@]}"
+  # Arguments for child NodeJS processes
+  ${NODE_REPOSITORY_ARGS+"NODE_REPOSITORY_ARGS=${NODE_REPOSITORY_ARGS}"}
+  # For coverage support
+  ${NODE_V8_COVERAGE+"NODE_V8_COVERAGE=${NODE_V8_COVERAGE}"}
+  "${node}"
+  ${LAUNCHER_NODE_OPTIONS[@]+"${LAUNCHER_NODE_OPTIONS[@]}"}
+  ${USER_NODE_OPTIONS[@]+"${USER_NODE_OPTIONS[@]}"}
+  "${MAIN}"
+  ${ARGS[@]+"${ARGS[@]}"}
+)
+
 if [[ -n "${STDOUT_CAPTURE}" ]] && [[ -n "${STDERR_CAPTURE}" ]]; then
-  "${node}" ${LAUNCHER_NODE_OPTIONS[@]+"${LAUNCHER_NODE_OPTIONS[@]}"} ${USER_NODE_OPTIONS[@]+"${USER_NODE_OPTIONS[@]}"} "${MAIN}" ${ARGS[@]+"${ARGS[@]}"} <&0 >$STDOUT_CAPTURE 2>$STDERR_CAPTURE &
+  env "${spawn_args[@]}" <&0 >$STDOUT_CAPTURE 2>$STDERR_CAPTURE &
 elif [[ -n "${STDOUT_CAPTURE}" ]]; then
-  "${node}" ${LAUNCHER_NODE_OPTIONS[@]+"${LAUNCHER_NODE_OPTIONS[@]}"} ${USER_NODE_OPTIONS[@]+"${USER_NODE_OPTIONS[@]}"} "${MAIN}" ${ARGS[@]+"${ARGS[@]}"} <&0 >$STDOUT_CAPTURE &
+  env "${spawn_args[@]}" <&0 >$STDOUT_CAPTURE &
 elif [[ -n "${STDERR_CAPTURE}" ]]; then
-  "${node}" ${LAUNCHER_NODE_OPTIONS[@]+"${LAUNCHER_NODE_OPTIONS[@]}"} ${USER_NODE_OPTIONS[@]+"${USER_NODE_OPTIONS[@]}"} "${MAIN}" ${ARGS[@]+"${ARGS[@]}"} <&0 2>$STDERR_CAPTURE &
+  env "${spawn_args[@]}" <&0 2>$STDERR_CAPTURE &
 else
-  "${node}" ${LAUNCHER_NODE_OPTIONS[@]+"${LAUNCHER_NODE_OPTIONS[@]}"} ${USER_NODE_OPTIONS[@]+"${USER_NODE_OPTIONS[@]}"} "${MAIN}" ${ARGS[@]+"${ARGS[@]}"} <&0 &
+  env "${spawn_args[@]}" <&0 &
 fi
 
 readonly child=$!

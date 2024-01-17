@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash --noprofile
 # Copyright 2017 The Bazel Authors. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Capture initial env var state
-readarray -d '' INIT_ENV_ARGS < <(env -0)
+# Capture initial env var state, sans some shell vars
+readarray -d '' INIT_ENV_ARGS < <(env -0 -u SHLVL -u _ -u PWD)
 
 # --- begin runfiles.bash initialization v2 ---
 # Copy-pasted from the Bazel Bash runfiles library v2.

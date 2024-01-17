@@ -95,6 +95,9 @@ export RUNFILES
 
 TEMPLATED_env_vars
 
+# Metadata for recreation of node_modules symlinks if required
+export NM_SYMLINKS="$(mktemp -d)/nm-symlinks.json"
+
 # Note: for debugging it is useful to see what files are actually present
 # This redirects to stderr so it doesn't interfere with Bazel's worker protocol
 # find . -name thingImLookingFor 1>&2
@@ -395,7 +398,9 @@ set +e
 
 # Prepare NodeJS args plus a cleaned environment
 spawn_args=(
-  -i
+  --ignore-environment
+  # Expose `NM_SYMLINKS` so persistent workers can recreate side effects if required
+  ${NM_SYMLINKS+"NM_SYMLINKS=${NM_SYMLINKS}"}
   "${INIT_ENV_ARGS[@]}"
   # Arguments for child NodeJS processes
   ${NODE_REPOSITORY_ARGS+"NODE_REPOSITORY_ARGS=${NODE_REPOSITORY_ARGS}"}

@@ -342,7 +342,7 @@ PROXY_ENVVARS = [
 
 def _run_preinstall_cmd(repository_ctx, env):
     if len(repository_ctx.attr.preinstall_cmd) > 0:
-        repository_ctx.report_process("Running preinstall command")
+        repository_ctx.report_progess("Running preinstall command")
         result = repository_ctx.execute(
             repository_ctx.attr.preinstall_cmd,
             timeout = repository_ctx.attr.timeout,

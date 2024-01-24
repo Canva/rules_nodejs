@@ -308,6 +308,13 @@ data attribute.
         default = 3600,
         doc = """Maximum duration of the package manager execution in seconds.""",
     ),
+    "preinstall_cmd": attr.string_list(
+        doc = """
+            Command to run before installing `node_modules`.
+
+            First argument must be an exectuable, CWD will be that of package directory.
+        """,
+    ),
     "_inputs": attr.label_list(
         default = [
             "//internal/npm_install:pre_process_package_json.js",
@@ -332,6 +339,19 @@ PROXY_ENVVARS = [
     "no_proxy",
     "all_proxy",
 ]
+
+def _run_preinstall_cmd(repository_ctx, env):
+    if len(repository_ctx.attr.preinstall_cmd) > 0:
+        repository_ctx.report_progress("Running preinstall command")
+        result = repository_ctx.execute(
+            repository_ctx.attr.preinstall_cmd,
+            timeout = repository_ctx.attr.timeout,
+            quiet = repository_ctx.attr.quiet,
+            environment = env,
+            working_directory = str(repository_ctx.path(repository_ctx.attr.package_json).dirname),
+        )
+        if result.return_code:
+            fail("preinstall command failed: %s (%s)" % (result.stdout, result.stderr))
 
 def _apply_pre_install_patches(repository_ctx):
     if len(repository_ctx.attr.pre_install_patches) == 0:
@@ -685,6 +705,8 @@ cd /D "{root}" && "{npm}" {npm_args}
 
     env = _propagate_http_proxy_env(repository_ctx, env)
 
+    _run_preinstall_cmd(repository_ctx, env)
+
     # NB: after running npm install, it's essential that we don't cause the repository rule to restart
     # This means we must not reference any additional labels after this point.
     # See https://github.com/bazelbuild/rules_nodejs/issues/2620
@@ -851,6 +873,8 @@ cd /D "{root}" && "{yarn}" {yarn_args}
     env["BUILD_BAZEL_RULES_NODEJS_VERSION"] = VERSION
 
     env = _propagate_http_proxy_env(repository_ctx, env)
+
+    _run_preinstall_cmd(repository_ctx, env)
 
     repository_ctx.report_progress("Running yarn install on %s" % repository_ctx.attr.package_json)
     result = repository_ctx.execute(

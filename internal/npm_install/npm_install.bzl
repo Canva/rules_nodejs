@@ -827,6 +827,10 @@ def _yarn_install_impl(repository_ctx):
 set -e
 export YARN_IGNORE_PATH=1
 (cd "{root}"; "{yarn}" {yarn_args})
+if ! [[ -d "{root}/node_modules" ]]; then
+    echo "node_modules directory not found after yarn install, finished in $SECONDS seconds"
+    exit 1
+fi
 """.format(
                 root = root,
                 yarn = repository_ctx.path(yarn),

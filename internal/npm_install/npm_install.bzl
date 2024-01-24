@@ -340,7 +340,7 @@ PROXY_ENVVARS = [
     "all_proxy",
 ]
 
-def _run_preinstall_cmd(repository_ctx):
+def _run_preinstall_cmd(repository_ctx, env):
     if len(repository_ctx.attr.preinstall_cmd) > 0:
         repository_ctx.report_process("Running preinstall command")
         result = repository_ctx.execute(
@@ -705,7 +705,7 @@ cd /D "{root}" && "{npm}" {npm_args}
 
     env = _propagate_http_proxy_env(repository_ctx, env)
 
-    _run_preinstall_cmd(repository_ctx)
+    _run_preinstall_cmd(repository_ctx, env)
 
     # NB: after running npm install, it's essential that we don't cause the repository rule to restart
     # This means we must not reference any additional labels after this point.
@@ -870,7 +870,7 @@ cd /D "{root}" && "{yarn}" {yarn_args}
 
     env = _propagate_http_proxy_env(repository_ctx, env)
 
-    _run_preinstall_cmd(repository_ctx)
+    _run_preinstall_cmd(repository_ctx, env)
 
     repository_ctx.report_progress("Running yarn install on %s" % repository_ctx.attr.package_json)
     result = repository_ctx.execute(

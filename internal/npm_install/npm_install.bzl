@@ -348,7 +348,7 @@ def _run_preinstall_cmd(repository_ctx, env):
             timeout = repository_ctx.attr.timeout,
             quiet = repository_ctx.attr.quiet,
             environment = env,
-            working_directory = str(repository_ctx.path(repository_ctx.attr.package_json).dirname),
+            working_directory = str(repository_ctx.path(_rerooted_workspace_package_json_dir(repository_ctx))),
         )
         if result.return_code:
             fail("preinstall command failed: %s (%s)" % (result.stdout, result.stderr))

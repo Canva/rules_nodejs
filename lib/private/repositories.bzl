@@ -7,11 +7,13 @@ load("//lib/private:repositories/nodejs_toolchain_configure/impl.bzl", _nodejs_t
 load("//lib/private:repositories/nodejs_toolchains.bzl", _nodejs_toolchains = "nodejs_toolchains")
 load("//lib/private:repositories/yarn_install/attrs.bzl", _YARN_INSTALL_ATTRS = "YARN_INSTALL_ATTRS")
 load("//lib/private:repositories/yarn_install/impl.bzl", _yarn_install = "yarn_install")
+load("//lib/private:repositories/yarn_install_via_action/impl.bzl", _yarn_install_via_action = "yarn_install_via_action")
 
 visibility(["//", "//lib"])
 
 YARN_INSTALL_ATTRS = _YARN_INSTALL_ATTRS
 yarn_install = _yarn_install
+yarn_install_via_action = _yarn_install_via_action
 nodejs_download = _nodejs_download
 nodejs_download_host = _nodejs_download_host
 nodejs_toolchain_configure = _nodejs_toolchain_configure

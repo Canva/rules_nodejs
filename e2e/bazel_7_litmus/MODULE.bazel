@@ -1,5 +1,5 @@
 module(
-    name = "bazel_6_litmus",
+    name = "bazel_7_litmus",
     version = "0.0.0",
     compatibility_level = 0,
 )

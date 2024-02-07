@@ -747,71 +747,6 @@ function findEntryFile(pkg: Dep, path: string) {
   return entryFile;
 }
 
-/**
- * Tries to resolve the entryPoint file from the pkg for a given mainFileName
- *
- * @param {any} pkg
- * @param {'browser' | 'module' | 'main'} mainFileName
- * @returns {string | undefined} the path or undefined if we cant resolve the file
- */
-function resolveMainFile(pkg: Dep, mainFileName: string) {
-  const mainEntryField = pkg[mainFileName];
-
-  if (mainEntryField) {
-    if (typeof mainEntryField === 'string') {
-      return findEntryFile(pkg, mainEntryField)
-
-    } else if (typeof mainEntryField === 'object' && mainFileName === 'browser') {
-      // browser has a weird way of defining this
-      // the browser value is an object listing files to alias, usually pointing to a browser dir
-      const indexEntryPoint = mainEntryField['index.js'] || mainEntryField['./index.js'];
-      if (indexEntryPoint) {
-        return findEntryFile(pkg, indexEntryPoint)
-      }
-    }
-  }
-}
-
-/**
- * Tries to resolve the mainFile from a given pkg
- * This uses seveal mainFileNames in priority to find a correct usable file
- * @param {any} pkg
- * @returns {string | undefined}
- */
-function resolvePkgMainFile(pkg: Dep) {
-  // es2015 is another option for mainFile here
-  // but its very uncommon and im not sure what priority it takes
-  //
-  // this list is ordered, we try resolve `browser` first, then `module` and finally fall back to
-  // `main`
-  const mainFileNames = ['browser', 'module', 'main']
-
-      for (const mainFile of mainFileNames) {
-    const resolvedMainFile = resolveMainFile(pkg, mainFile);
-    if (resolvedMainFile) {
-      return resolvedMainFile;
-    }
-  }
-
-  // if we cant find any correct file references from the pkg
-  // then we just try looking around for common patterns
-  const maybeRootIndex = findEntryFile(pkg, 'index.js');
-  if (maybeRootIndex) {
-    return maybeRootIndex
-  }
-
-  const maybeSelfNamedIndex = findEntryFile(pkg, `${pkg._name}.js`);
-  if (maybeSelfNamedIndex) {
-    return maybeSelfNamedIndex;
-  }
-
-  // none of the methods we tried resulted in a file
-  log_verbose(`could not find entry point for npm package ${pkg._name}`);
-
-  // at this point there's nothing left for us to try, so return nothing
-  return undefined;
-}
-
 type Bag<T> =
     {
       [k: string]: T
@@ -1020,24 +955,6 @@ alias(
 )
 `;
 
-  let mainEntryPoint = resolvePkgMainFile(pkg)
-
-  // add an `npm_umd_bundle` target to generate an UMD bundle if one does
-  // not exists
-  if (mainEntryPoint && !findFile(pkg, `${pkg._name}.umd.js`)) {
-    result +=
-        `load("@build_bazel_rules_nodejs//internal/npm_install:npm_umd_bundle.bzl", "npm_umd_bundle")
-
-npm_umd_bundle(
-    name = "${pkg._name}__umd",
-    package_name = "${pkg._moduleName}",
-    entry_point = { "@${config.workspace}//:node_modules/${pkg._dir}": "${mainEntryPoint}" },
-    package = ":${pkg._name}",
-)
-
-`;
-  }
-
   return result;
 }
 
@@ -1165,24 +1082,6 @@ js_library(
 )
 
 `;
-
-  let mainEntryPoint = resolvePkgMainFile(pkg)
-
-  // add an `npm_umd_bundle` target to generate an UMD bundle if one does
-  // not exists
-  if (mainEntryPoint && !findFile(pkg, `${pkg._name}.umd.js`)) {
-    result +=
-        `load("@build_bazel_rules_nodejs//internal/npm_install:npm_umd_bundle.bzl", "npm_umd_bundle")
-
-npm_umd_bundle(
-    name = "${pkg._name}__umd",
-    package_name = "${pkg._moduleName}",
-    entry_point = "@${config.workspace}//:node_modules/${pkg._dir}/${mainEntryPoint}",
-    package = ":${pkg._name}",
-)
-
-`;
-  }
 
   return result;
 }

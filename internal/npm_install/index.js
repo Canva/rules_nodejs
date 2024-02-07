@@ -600,20 +600,6 @@ alias(
     actual = "${pkg._name}__contents",
 )
 `;
-    let mainEntryPoint = resolvePkgMainFile(pkg);
-    if (mainEntryPoint && !findFile(pkg, `${pkg._name}.umd.js`)) {
-        result +=
-            `load("@build_bazel_rules_nodejs//internal/npm_install:npm_umd_bundle.bzl", "npm_umd_bundle")
-
-npm_umd_bundle(
-    name = "${pkg._name}__umd",
-    package_name = "${pkg._moduleName}",
-    entry_point = { "@${config.workspace}//:node_modules/${pkg._dir}": "${mainEntryPoint}" },
-    package = ":${pkg._name}",
-)
-
-`;
-    }
     return result;
 }
 function printPackage(pkg) {
@@ -707,20 +693,6 @@ js_library(
 )
 
 `;
-    let mainEntryPoint = resolvePkgMainFile(pkg);
-    if (mainEntryPoint && !findFile(pkg, `${pkg._name}.umd.js`)) {
-        result +=
-            `load("@build_bazel_rules_nodejs//internal/npm_install:npm_umd_bundle.bzl", "npm_umd_bundle")
-
-npm_umd_bundle(
-    name = "${pkg._name}__umd",
-    package_name = "${pkg._moduleName}",
-    entry_point = "@${config.workspace}//:node_modules/${pkg._dir}/${mainEntryPoint}",
-    package = ":${pkg._name}",
-)
-
-`;
-    }
     return result;
 }
 function _findExecutables(pkg) {

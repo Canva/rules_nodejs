@@ -33,7 +33,6 @@ load("//internal/node:node_repositories.bzl", _node_repositories = "node_reposit
 load("//internal/node:npm_package_bin.bzl", _npm_bin = "npm_package_bin")
 load("//internal/npm_install:npm_install.bzl", _npm_install = "npm_install", _yarn_install = "yarn_install")
 load("//internal/pkg_npm:pkg_npm.bzl", _pkg_npm = "pkg_npm")
-load("//internal/pkg_web:pkg_web.bzl", _pkg_web = "pkg_web")
 
 check_bazel_version = _check_bazel_version
 copy_to_bin = _copy_to_bin
@@ -45,7 +44,6 @@ pkg_npm = _pkg_npm
 npm_install = _npm_install
 yarn_install = _yarn_install
 npm_package_bin = _npm_bin
-pkg_web = _pkg_web
 generated_file_test = _generated_file_test
 js_library = _js_library
 # ANY RULES ADDED HERE SHOULD BE DOCUMENTED, run yarn stardoc to verify

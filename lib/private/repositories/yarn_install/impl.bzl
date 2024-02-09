@@ -205,6 +205,12 @@ def _yarn_install_impl(rctx):
     if result.return_code:
         fail("yarn_install failed: %s (%s)" % (result.stdout, result.stderr))
 
+    # Create symlink from `node_modules` to `_/.../node_modules`
+    rctx.symlink(
+        rctx.path(_rerooted_workspace_package_json_dir(rctx) + "/node_modules"),
+        rctx.path("node_modules"),
+    )
+
     result = rctx.execute([
         "find",
         rctx.path("node_modules"),

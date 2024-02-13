@@ -191,10 +191,7 @@ def _nodejs_binary_impl(ctx):
 
     _write_loader_script(ctx)
 
-    # Provide the target name as an environment variable avaiable to all actions for the
-    # runfiles helpers to use.
-    env_vars = "export BAZEL_TARGET=%s\n" % ctx.label
-    env_vars += """export NM_SYMLINKS="$(mktemp -d)/nm-symlinks.json"\n"""
+    env_vars = ""
 
     # Add all env vars from the ctx attr
     for [key, value] in ctx.attr.env.items():

@@ -258,6 +258,9 @@ def create_package(ctx, deps_files, nested_packages):
         inputs = inputs,
         outputs = [package_dir],
         arguments = [args],
+        # Without this, `PATH` is unset and OS specified defaults are used.
+        # e.g. Bash 3.2 on macoS Sonoma (via `/bin:/usr/bin`)
+        use_default_shell_env = True,
     )
 
     _create_npm_scripts(ctx)
@@ -290,6 +293,9 @@ def _create_npm_scripts(ctx):
             "no-remote-exec": "",
             "no-sandbox": "",
         },
+        # Without this, `PATH` is unset and OS specified defaults are used.
+        # e.g. Bash 3.2 on macoS Sonoma (via `/bin:/usr/bin`)
+        use_default_shell_env = True,
     )
 
 def _pkg_npm(ctx):

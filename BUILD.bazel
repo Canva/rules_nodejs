@@ -54,7 +54,6 @@ bzl_library(
         "//internal/js_library:bzl",
         "//internal/linker:bzl",
         "//internal/pkg_npm:bzl",
-        "//internal/pkg_web:bzl",
         "//internal/providers:bzl",
         "//toolchains/node:bzl",
     ],

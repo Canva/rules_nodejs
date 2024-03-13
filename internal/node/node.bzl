@@ -194,8 +194,9 @@ def _nodejs_binary_impl(ctx):
     env_vars = ""
 
     # Add all env vars from the ctx attr
+    expanded_env = {}
     for [key, value] in ctx.attr.env.items():
-        env_vars += "export %s=%s\n" % (key, expand_location_into_runfiles(ctx, value, ctx.attr.data))
+        expanded_env[key] = expand_location_into_runfiles(ctx, value, ctx.attr.data)
 
     # While we can derive the workspace from the pwd when running locally
     # because it is in the execroot path `execroot/my_wksp`, on RBE the
@@ -361,6 +362,7 @@ fi
         # since this will be called from a nodejs_test, where the entrypoint is going to be the test file
         # we shouldn't add the entrypoint as a attribute to collect here
         coverage_common.instrumented_files_info(ctx, dependency_attributes = ["data"], extensions = ["js", "ts"]),
+        RunEnvironmentInfo(expanded_env),
     ]
 
 _NODEJS_EXECUTABLE_ATTRS = {

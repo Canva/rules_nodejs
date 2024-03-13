@@ -469,8 +469,9 @@ nodejs_binary(
         allow_files = True,
     ),
     "env": attr.string_dict(
-        doc = """Specifies additional environment variables to set when the target is executed, subject to location
-expansion.
+        doc = """
+            Specifies additional environment variables to set when the target is executed with `run` and `test`.
+            Subject to location expansion.
         """,
         default = {},
     ),

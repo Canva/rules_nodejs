@@ -62,7 +62,9 @@ function patcher$1(fs = fs__namespace, roots) {
                 if (err) {
                     return cb(err);
                 }
-                path__namespace.resolve(args[0]);
+                path__namespace.resolve(
+                // node 20.12 tightened the constraints and requires the input to be a string
+                String(args[0]));
                 if (!stats.isSymbolicLink()) {
                     return cb(null, stats);
                 }
@@ -216,7 +218,9 @@ function patcher$1(fs = fs__namespace, roots) {
         return str;
     };
     fs.readdir = (...args) => {
-        const p = path__namespace.resolve(args[0]);
+        const p = path__namespace.resolve(
+        // node 20.12 tightened the constraints and requires the input to be a string
+        String(args[0]));
         let cb = args[args.length - 1];
         if (typeof cb !== 'function') {
             // this will likely throw callback required error.
@@ -229,8 +233,7 @@ function patcher$1(fs = fs__namespace, roots) {
             }
             // user requested withFileTypes
             if (result[0] && result[0].isSymbolicLink) {
-                Promise
-                    .all(result.map((v) => handleDirent(p, v)))
+                Promise.all(result.map((v) => handleDirent(p, v)))
                     .then(() => {
                     cb(null, result);
                 })
@@ -247,7 +250,9 @@ function patcher$1(fs = fs__namespace, roots) {
     };
     fs.readdirSync = (...args) => {
         const res = origReaddirSync(...args);
-        const p = path__namespace.resolve(args[0]);
+        const p = path__namespace.resolve(
+        // node 20.12 tightened the constraints and requires the input to be a string
+        String(args[0]));
         res.forEach((v) => {
             handleDirentSync(p, v);
         });
@@ -561,21 +566,22 @@ const runfilesPathMatcher = '.runfiles';
 function inferRunfilesDirFromPath(maybeRunfilesSource) {
     while (maybeRunfilesSource !== '/') {
         if (maybeRunfilesSource.endsWith(runfilesPathMatcher)) {
-            return maybeRunfilesSource + '/';
+            return (maybeRunfilesSource + '/');
         }
         maybeRunfilesSource = path__namespace.dirname(maybeRunfilesSource);
     }
     throw new Error('Path does not contain a runfiles parent directory.');
 }
-const removeNulls = (value) => value != null;
+function removeNulls(value) {
+    return value != null;
+}
 function runfilesLocator() {
     // Sometimes cwd is under runfiles
     const cwd = process.cwd();
     // Runfiles environment variables are the preferred reference point, but can fail
-    const envRunfilesCanidates = [
-        process.env.RUNFILES_DIR,
-        process.env.RUNFILES,
-    ].filter(removeNulls).map(runfilesDir => {
+    const envRunfilesCanidates = [process.env.RUNFILES_DIR, process.env.RUNFILES]
+        .filter(removeNulls)
+        .map(runfilesDir => {
         const adjustedRunfilesDir = fs__namespace.realpathSync(runfilesDir);
         if (runfilesDir !== adjustedRunfilesDir) {
             return adjustedRunfilesDir;
@@ -625,8 +631,7 @@ VERBOSE_LOGS, } = process.env;
 if (BAZEL_PATCH_ROOTS) {
     const roots = BAZEL_PATCH_ROOTS ? BAZEL_PATCH_ROOTS.split(',') : [];
     if (VERBOSE_LOGS) {
-        console
-            .error(`bazel node patches enabled. roots: ${roots} symlinks in these directories will not escape`);
+        console.error(`bazel node patches enabled. roots: ${roots} symlinks in these directories will not escape`);
     }
     const fs = require('fs');
     patcher$1(fs, roots);

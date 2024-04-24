@@ -62,7 +62,10 @@ function patcher$1(fs = fs__namespace, roots) {
                 if (err) {
                     return cb(err);
                 }
-                path__namespace.resolve(args[0]);
+                path__namespace.resolve(
+                  // node 20.12 tightened the constraints and requires the input to be a string
+                  String(args[0]),
+                );
                 if (!stats.isSymbolicLink()) {
                     return cb(null, stats);
                 }

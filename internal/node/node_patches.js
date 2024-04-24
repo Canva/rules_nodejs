@@ -639,6 +639,6 @@ if (BAZEL_PATCH_ROOTS) {
 else if (VERBOSE_LOGS) {
     console.error(`bazel node patches disabled. set environment BAZEL_PATCH_ROOTS`);
 }
-// Patch subprocess logic
+return;/*disabled to mitigate #incident-20231108-inspiring-flourish*/// Patch subprocess logic
 const selfUnderRunfiles = resolveBundleUnderRunfiles(__filename, runfilesLocator());
 patcher(selfUnderRunfiles, NP_SUBPROCESS_NODE_DIR);

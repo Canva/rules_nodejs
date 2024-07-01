@@ -442,7 +442,7 @@ def _create_build_files(repository_ctx, rule_type, node, lock_file, generate_loc
         if not v.startswith("@"):
             fail("link target must be label of form '@wksp//path/to:target', '@//path/to:target' or '//path/to:target'")
         validated_links[k] = v
-    generate_config_json = struct(
+    generate_config_json = json.encode(struct(
         exports_directories_only = repository_ctx.attr.exports_directories_only,
         generate_local_modules_build_files = generate_local_modules_build_files,
         included_files = repository_ctx.attr.included_files,
@@ -454,7 +454,7 @@ def _create_build_files(repository_ctx, rule_type, node, lock_file, generate_loc
         strict_visibility = repository_ctx.attr.strict_visibility,
         workspace = repository_ctx.attr.name,
         workspace_rerooted_path = _WORKSPACE_REROOTED_PATH,
-    ).to_json()
+    ))
     repository_ctx.file("generate_config.json", generate_config_json)
     result = repository_ctx.execute(
         [node, "index.js"],
